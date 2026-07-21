@@ -123,30 +123,31 @@
   .substeps-list li{counter-increment:substep;display:flex;gap:9px;align-items:flex-start;padding:5px 0;font-size:0.92rem;line-height:1.4;}
   .substeps-list li::before{content:counter(step) "." counter(substep);font-family:'Fraunces',serif;font-weight:700;color:var(--brick-dark);font-size:0.74rem;flex-shrink:0;margin-top:3px;min-width:20px;}
   .token{background:var(--kraft);border-radius:4px;padding:0 4px;font-weight:600;color:var(--brick-dark);}
-  .form-grid label{display:block;font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em;color:var(--ink-soft);margin:16px 0 6px;}
-  .form-grid input[type=text],.form-grid input[type=url],.form-grid input[type=number],.form-grid select,.form-grid textarea{width:100%;font-family:'Karla',sans-serif;font-size:0.95rem;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);}
+  .form-grid label{display:block;font-weight:600;font-size:0.82rem;color:var(--ink-soft);margin:14px 0 5px;}
+  .form-grid input[type=text],.form-grid input[type=url],.form-grid input[type=number]:not(.row-pos),.form-grid select,.form-grid textarea{width:100%;font-family:'Karla',sans-serif;font-size:0.95rem;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);}
   .form-grid .hint{font-size:0.76rem;color:var(--ink-soft);margin-top:4px;font-weight:500;text-transform:none;letter-spacing:0;}
   .img-preview{margin-top:10px;width:100%;height:130px;object-fit:cover;border-radius:8px;border:1.5px dashed var(--line);display:none;}
-  .ing-row{display:grid;grid-template-columns:34px 70px 110px 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center;}
-  .ing-row .qty-input{padding:9px 8px;}
-  .row-del{width:30px;height:36px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.9rem;}
-  .row-del:hover{background:var(--brick);color:#fff;border-color:var(--brick);}
-  .row-move-group{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
-  .row-move{width:30px;height:16px;border-radius:5px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.6rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;}
-  .row-move:hover:not(:disabled){background:var(--brick);color:#fff;border-color:var(--brick);}
-  .row-move:disabled{opacity:0.25;cursor:default;}
+   .ing-row{display:grid;grid-template-columns:70px 110px 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center;}
+   .form-grid.reorder-ings .ing-row{grid-template-columns:42px 70px 110px 1fr 1fr 32px;}
+   .ing-row .qty-input{padding:9px 8px;}
+   .row-del{width:30px;height:36px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.9rem;}
+   .row-del:hover{background:var(--brick);color:#fff;border-color:var(--brick);}
+   .row-pos{width:38px;height:36px;border-radius:6px;border:1.5px solid var(--brick);background:var(--kraft);color:var(--brick-dark);font-family:'Karla',sans-serif;font-weight:700;font-size:0.9rem;text-align:center;padding:0;flex-shrink:0;-moz-appearance:textfield;appearance:textfield;}
+   .row-pos:focus{outline:none;background:#fff;border-color:var(--wine);}
+   .row-pos::-webkit-outer-spin-button,
+   .row-pos::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   .row-add{margin-top:4px;background:none;border:1.5px dashed var(--line);color:var(--brick-dark);font-weight:700;font-size:0.82rem;border-radius:8px;padding:8px 12px;cursor:pointer;width:100%;}
   .row-add:hover{border-color:var(--brick);background:var(--kraft);}
   .step-row{position:relative;margin-bottom:8px;}
   .step-row-inner{display:flex;gap:8px;align-items:flex-start;}
-  .step-row textarea{flex:1;min-height:52px;resize:vertical;font-family:'Karla',sans-serif;font-size:0.95rem;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);}
+  .step-row textarea{flex:1;min-height:52px;resize:none;overflow:hidden;font-family:'Karla',sans-serif;font-size:0.95rem;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);}
   .step-row-section .step-row-inner{align-items:center;}
   .section-title-input{flex:1;font-family:'Kalam',cursive;font-weight:700;font-size:1rem;color:var(--wine);padding:10px 12px;border:1.5px dashed var(--brick);border-radius:8px;background:var(--kraft);}
   .row-add-section{margin-top:8px;color:var(--wine);}
   .substeps-editor{margin:8px 0 0 20px;padding-left:14px;border-left:2px dotted var(--line);}
   .substep-row{position:relative;margin-bottom:6px;}
   .substep-row-inner{display:flex;gap:8px;align-items:flex-start;}
-  .substep-row textarea{flex:1;min-height:38px;resize:vertical;font-family:'Karla',sans-serif;font-size:0.88rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);}
+  .substep-row textarea{flex:1;min-height:38px;resize:none;overflow:hidden;font-family:'Karla',sans-serif;font-size:0.88rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);}
   .row-add-substep{margin-top:4px;background:none;border:1.5px dashed var(--line);color:var(--ink-soft);font-weight:600;font-size:0.76rem;border-radius:7px;padding:6px 10px;cursor:pointer;}
   .row-add-substep:hover{border-color:var(--brick);color:var(--brick-dark);background:var(--kraft);}
   .row-del-sm{width:26px;height:32px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.8rem;flex-shrink:0;}
@@ -154,7 +155,18 @@
   .step-preview{font-size:0.78rem;color:var(--ink-soft);margin-top:4px;padding:6px 10px;background:var(--paper);border-radius:6px;border:1px dashed var(--line);display:none;}
   .step-preview.show{display:block;}
   .step-preview .token{background:var(--kraft);color:var(--brick-dark);}
-  .ing-picker{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+   .ing-picker{display:none;flex-wrap:wrap;gap:6px;margin-top:6px;}
+   .step-row.show-ings .ing-picker{display:flex;}
+   .row-pos{display:none;}
+   .form-grid.reorder-ings .ing-row .row-pos,
+   .form-grid.reorder-steps .step-row .row-pos{display:inline-block;}
+  .reorder-toggle{background:none;border:1.5px dashed var(--line);color:var(--ink-soft);font-weight:600;font-size:0.78rem;border-radius:8px;padding:6px 10px;cursor:pointer;margin-left:auto;}
+  .reorder-toggle:hover{border-color:var(--brick);color:var(--brick-dark);}
+  .reorder-toggle.active{background:var(--brick);border-color:var(--brick);border-style:solid;color:#fff;}
+  .field-head{display:flex;align-items:center;gap:8px;margin:14px 0 5px;}
+  .field-head label{margin:0 !important;}
+  .ing-toggle{background:none;border:none;color:var(--ink-soft);font-size:0.78rem;font-weight:600;cursor:pointer;padding:4px 0;margin-top:2px;text-align:left;}
+  .ing-toggle:hover{color:var(--brick-dark);}
   .ing-chip{font-size:0.75rem;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;color:var(--brick-dark);font-weight:600;}
   .ing-chip:hover{background:var(--kraft);border-color:var(--brick);}
   .autocomplete-box{position:absolute;left:0;right:38px;top:100%;margin-top:2px;background:var(--card);border:1.5px solid var(--brick);border-radius:8px;box-shadow:var(--shadow);z-index:20;max-height:150px;overflow-y:auto;display:none;}
@@ -218,14 +230,9 @@
 <div class="overlay" id="formOverlay">
   <div class="detail form-grid" id="formContent">
     <button class="close-btn" id="closeForm">✕</button>
-    <span class="tab2" id="formTag">Nova receita</span>
-    <h2 id="formHeading" style="margin-bottom:4px;">Adicionar receita</h2>
+    <h2 id="formHeading" style="margin:0 0 18px;">Nova receita</h2>
 
-    <label>Link da imagem</label>
-    <input type="url" id="fImage" placeholder="https://... (Pinterest, Google, etc.)">
-    <img id="fImagePreview" class="img-preview">
-
-    <label>Nome da receita</label>
+    <label>Nome</label>
     <input type="text" id="fTitle" placeholder="Ex: Palha Italiana com Nutella">
 
     <label>Categoria</label>
@@ -235,19 +242,29 @@
       <option>Outros</option>
     </select>
 
-    <label>Ingredientes</label>
-    <div class="hint" style="margin-bottom:8px;">Quantidade · unidade · nome do ingrediente · marca preferida (opcional, só aparece na lista de compras)</div>
+    <label>Imagem <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
+    <input type="url" id="fImage" placeholder="Cole um link de imagem">
+    <img id="fImagePreview" class="img-preview">
+
+    <div class="field-head">
+      <label>Ingredientes</label>
+      <button type="button" class="reorder-toggle" id="reorderIngsBtn">Reordenar</button>
+    </div>
     <div id="ingRows"></div>
-    <button type="button" class="row-add" id="addIngRow">+ adicionar ingrediente</button>
+    <button type="button" class="row-add" id="addIngRow">+ ingrediente</button>
 
-    <label>Modo de preparo</label>
-    <div class="hint" style="margin-bottom:8px;">Clique num ingrediente para inseri-lo como referência — ao multiplicar a receita as quantidades no preparo mudam sozinhas. Ao clicar, você pode informar uma quantidade diferente só para aquela etapa (ex: 6 colheres de Nutella num passo e 3 colheres em outro). Use "+ adicionar seção" para dividir o preparo em blocos com título (ex: Calda, Brigadeiro, Montagem).</div>
+    <div class="field-head">
+      <label>Modo de preparo</label>
+      <button type="button" class="reorder-toggle" id="reorderStepsBtn">Reordenar</button>
+    </div>
     <div id="stepRows"></div>
-    <button type="button" class="row-add" id="addStepRow">+ adicionar passo</button>
-    <button type="button" class="row-add row-add-section" id="addSectionRow">+ adicionar seção (título)</button>
+    <button type="button" class="row-add" id="addStepRow">+ passo</button>
+    <button type="button" class="row-add row-add-section" id="addSectionRow">+ seção</button>
 
-    <div class="err" id="formErr">Dá um nome pra receita antes de salvar :)</div>
-    <button class="save-btn" id="saveRecipe">Salvar na caixinha</button>
+    <div class="hint" style="margin-top:14px;opacity:.75;">Dica: clique num ingrediente ao escrever o passo para que a quantidade mude sozinha ao multiplicar a receita.</div>
+
+    <div class="err" id="formErr">Dá um nome pra receita :)</div>
+    <button class="save-btn" id="saveRecipe">Salvar</button>
   </div>
 </div>
 
@@ -643,8 +660,8 @@ function closeDetail(){ document.getElementById('detailOverlay').classList.remov
 /* Form */
 function openForm(recipe){
   editingId = recipe ? recipe.id : null;
-  document.getElementById('formTag').textContent = recipe?'Editar receita':'Nova receita';
-  document.getElementById('formHeading').textContent = recipe?'Editar receita':'Adicionar receita';
+  const _ft = document.getElementById('formTag'); if(_ft) _ft.textContent = recipe?'Editar receita':'Nova receita';
+  document.getElementById('formHeading').textContent = recipe?'Editar receita':'Nova receita';
   document.getElementById('fImage').value = recipe?(recipe.imageUrl||''):'';
   document.getElementById('fTitle').value = recipe?recipe.title:'';
   document.getElementById('fCat').value = recipe?recipe.category:'Doce';
@@ -671,29 +688,31 @@ function renderIngRows(){
     const row=document.createElement('div'); row.className='ing-row';
     const unitOptions=UNITS.map(u=>`<option value="${u.value}" ${u.value===ing.unit?'selected':''}>${u.singular}</option>`).join('');
     row.innerHTML=`
-      <div class="row-move-group">
-        <button type="button" class="row-move" data-dir="up" title="mover para cima" ${idx===0?'disabled':''}>▲</button>
-        <button type="button" class="row-move" data-dir="down" title="mover para baixo" ${idx===formIngredients.length-1?'disabled':''}>▼</button>
-      </div>
+      <input type="number" min="1" max="${formIngredients.length}" class="row-pos" title="posição — digite o número e Enter" value="${idx+1}">
       <input type="text" inputmode="decimal" class="qty-input" placeholder="qtd (ex: 1 1/2)" value="${escapeHtml(String(ing.qty))}">
       <select>${unitOptions}</select>
       <input type="text" placeholder="ingrediente (ex: manteiga com sal)" value="${escapeHtml(ing.name)}">
       <input type="text" placeholder="marca (opcional)" value="${escapeHtml(ing.brand||'')}">
       <button type="button" class="row-del" title="remover">✕</button>`;
-    const inputs = row.querySelectorAll('input,select');
-    inputs[0].addEventListener('input', e=>ing.qty=e.target.value);
-    inputs[1].addEventListener('change', e=>ing.unit=e.target.value);
-    inputs[2].addEventListener('input', e=>{ ing.name=e.target.value; refreshStepPreviews(); refreshIngPickers(); });
-    inputs[3].addEventListener('input', e=>ing.brand=e.target.value);
-    row.querySelectorAll('.row-move').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        const dir=btn.dataset.dir;
-        const swapWith = dir==='up' ? idx-1 : idx+1;
-        if(swapWith<0 || swapWith>=formIngredients.length) return;
-        [formIngredients[idx], formIngredients[swapWith]] = [formIngredients[swapWith], formIngredients[idx]];
-        renderIngRows(); refreshStepPreviews();
-      });
-    });
+    const inputs = row.querySelectorAll('input.qty-input, select, input[placeholder^="ingrediente"], input[placeholder^="marca"]');
+    row.querySelector('.qty-input').addEventListener('input', e=>ing.qty=e.target.value);
+    row.querySelector('select').addEventListener('change', e=>ing.unit=e.target.value);
+    const nameInp = row.querySelectorAll('input[type=text]')[1];
+    const brandInp = row.querySelectorAll('input[type=text]')[2];
+    nameInp.addEventListener('input', e=>{ ing.name=e.target.value; refreshStepPreviews(); refreshIngPickers(); });
+    brandInp.addEventListener('input', e=>ing.brand=e.target.value);
+    const posInp = row.querySelector('.row-pos');
+    const applyPos = ()=>{
+      let n = parseInt(posInp.value,10);
+      if(!n || n<1) n=1; if(n>formIngredients.length) n=formIngredients.length;
+      const target = n-1;
+      if(target===idx){ posInp.value=idx+1; return; }
+      const [it] = formIngredients.splice(idx,1);
+      formIngredients.splice(target,0,it);
+      renderIngRows(); refreshStepPreviews();
+    };
+    posInp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyPos(); }});
+    posInp.addEventListener('blur', applyPos);
     row.querySelector('.row-del').addEventListener('click',()=>{
       formIngredients.splice(idx,1);
       if(formIngredients.length===0) addIngredientRow();
@@ -710,11 +729,7 @@ function renderStepRows(){
   const wrap=document.getElementById('stepRows'); wrap.innerHTML='';
   formSteps.forEach((item,idx)=>{
     const row=document.createElement('div');
-    const moveGroupHtml = `
-      <div class="row-move-group">
-        <button type="button" class="row-move" data-dir="up" title="mover para cima" ${idx===0?'disabled':''}>▲</button>
-        <button type="button" class="row-move" data-dir="down" title="mover para baixo" ${idx===formSteps.length-1?'disabled':''}>▼</button>
-      </div>`;
+    const moveGroupHtml = `<input type="number" min="1" max="${formSteps.length}" class="row-pos" title="posição — digite o número e Enter" value="${idx+1}">`;
     if(item.type==='section'){
       row.className='step-row step-row-section';
       row.innerHTML=`
@@ -729,33 +744,47 @@ function renderStepRows(){
       });
     } else {
       row.className='step-row';
+      const showIngUI = item._new === true;
       row.innerHTML=`
         <div class="step-row-inner">
           ${moveGroupHtml}
-          <textarea placeholder="Ex: Triture o biscoito... (clique num ingrediente abaixo para inserir)">${escapeHtml(item.text)}</textarea>
+          <textarea placeholder="Ex: Triture o biscoito...">${escapeHtml(item.text)}</textarea>
           <button type="button" class="row-del" title="remover">✕</button>
         </div>
-        <div class="ing-picker"></div>
+        ${showIngUI ? '<button type="button" class="ing-toggle" data-role="ing-toggle">+ inserir ingrediente</button><div class="ing-picker"></div>' : ''}
         <div class="step-preview"></div>`;
       const ta=row.querySelector('textarea');
-      ta.addEventListener('input',e=>{ formSteps[idx].text=e.target.value; updatePreview(row, e.target.value); });
+      autoGrowTextarea(ta);
+      ta.addEventListener('input',e=>{ formSteps[idx].text=e.target.value; updatePreview(row, e.target.value); autoGrowTextarea(ta); });
       row.querySelector('.row-del').addEventListener('click',()=>{
         formSteps.splice(idx,1); ensureAtLeastOneStep(); renderStepRows();
       });
-    }
-    row.querySelectorAll('.row-move').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        const dir=btn.dataset.dir;
-        const swapWith = dir==='up' ? idx-1 : idx+1;
-        if(swapWith<0 || swapWith>=formSteps.length) return;
-        [formSteps[idx], formSteps[swapWith]] = [formSteps[swapWith], formSteps[idx]];
-        renderStepRows();
+      const igt = row.querySelector('[data-role=ing-toggle]');
+      if(igt) igt.addEventListener('click',()=>{
+        row.classList.toggle('show-ings');
+        igt.textContent = row.classList.contains('show-ings') ? '− esconder ingredientes' : '+ inserir ingrediente';
       });
-    });
+    }
+    const posInp = row.querySelector('.row-pos');
+    const applyPos = ()=>{
+      let n = parseInt(posInp.value,10);
+      if(!n || n<1) n=1; if(n>formSteps.length) n=formSteps.length;
+      const target = n-1;
+      if(target===idx){ posInp.value=idx+1; return; }
+      const [it] = formSteps.splice(idx,1);
+      formSteps.splice(target,0,it);
+      renderStepRows();
+    };
+    posInp.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); applyPos(); }});
+    posInp.addEventListener('blur', applyPos);
     wrap.appendChild(row);
     if(item.type!=='section') updatePreview(row, item.text);
   });
   refreshIngPickers();
+}
+function autoGrowTextarea(ta){
+  ta.style.height='auto';
+  ta.style.height=(ta.scrollHeight)+'px';
 }
 function updatePreview(row, text){
   const box=row.querySelector('.step-preview');
@@ -803,7 +832,19 @@ function refreshIngPickers(){
   });
 }
 
-document.getElementById('addStepRow').addEventListener('click',()=>{ formSteps.push({type:'step', text:''}); renderStepRows(); });
+document.getElementById('reorderIngsBtn').addEventListener('click',e=>{
+  const fc=document.getElementById('formContent');
+  fc.classList.toggle('reorder-ings');
+  e.currentTarget.classList.toggle('active', fc.classList.contains('reorder-ings'));
+  e.currentTarget.textContent = fc.classList.contains('reorder-ings') ? 'Concluir' : 'Reordenar';
+});
+document.getElementById('reorderStepsBtn').addEventListener('click',e=>{
+  const fc=document.getElementById('formContent');
+  fc.classList.toggle('reorder-steps');
+  e.currentTarget.classList.toggle('active', fc.classList.contains('reorder-steps'));
+  e.currentTarget.textContent = fc.classList.contains('reorder-steps') ? 'Concluir' : 'Reordenar';
+});
+document.getElementById('addStepRow').addEventListener('click',()=>{ formSteps.push({type:'step', text:'', _new:true}); renderStepRows(); });
 document.getElementById('addSectionRow').addEventListener('click',()=>{ formSteps.push({type:'section', text:''}); renderStepRows(); });
 document.getElementById('fImage').addEventListener('input',updateImgPreview);
 document.getElementById('openAdd').addEventListener('click',()=>openForm(null));
