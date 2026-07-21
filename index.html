@@ -75,6 +75,10 @@
   @media (hover:none){ .card-actions{opacity:1;} }
   .icon-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink-soft);font-size:0.8rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .icon-btn:hover{background:var(--brick);color:#fff;border-color:var(--brick);}
+  .drag-handle{cursor:grab;touch-action:none;}
+  .drag-handle:active{cursor:grabbing;}
+  .rcard.dragging{opacity:0.9;box-shadow:0 24px 46px -12px rgba(0,0,0,0.4);z-index:1000;}
+  .rcard-placeholder{border:2px dashed var(--line);border-radius:10px;background:rgba(0,0,0,0.035);}
   .empty-state{text-align:center;padding:70px 20px;color:var(--ink-soft);}
   .empty-state .em{font-size:2.4rem;margin-bottom:10px;}
   .empty-state h2{font-family:'Fraunces',serif;color:var(--ink);margin:0 0 8px;}
@@ -168,6 +172,7 @@
   .back-link{background:none;border:none;color:var(--ink-soft);font-size:0.82rem;cursor:pointer;text-decoration:underline;padding:0;margin-bottom:10px;}
   .copy-toast{font-size:0.78rem;color:var(--sage);font-weight:700;margin-top:8px;display:none;}
   .brand-tag{font-size:0.78rem;color:var(--ink-soft);font-style:italic;margin-left:6px;}
+  .qty-tag{font-weight:700;color:var(--brick);margin-right:6px;}
   footer{text-align:center;margin-top:60px;font-family:'Kalam',cursive;color:var(--ink-soft);font-size:0.85rem;}
   @media (max-width:560px){
     .detail{padding:26px 20px 30px;}
@@ -258,6 +263,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 const STORAGE_KEY = 'minhas_receitas_v2';
 let recipes = [];
 let activeFilter = null;
+let sortOrderColumnMissing = false;
 let editingId = null;
 let formIngredients = [];
 let formSteps = [];
@@ -333,7 +339,8 @@ function dbRowToRecipe(row){
     category: row.category,
     imageUrl: row.image_url || '',
     ingredients: row.ingredients || [],
-    steps: row.steps || []
+    steps: row.steps || [],
+    order: (row.sort_order===undefined || row.sort_order===null) ? null : row.sort_order
   };
 }
 function recipeToDbRow(r){
@@ -343,13 +350,21 @@ function recipeToDbRow(r){
     category: r.category,
     image_url: r.imageUrl || '',
     ingredients: r.ingredients,
-    steps: r.steps
+    steps: r.steps,
+    sort_order: (r.order==null ? 0 : r.order)
   };
 }
 async function loadRecipes(){
   const grid=document.getElementById('grid');
   grid.innerHTML='<p style="color:var(--ink-soft);grid-column:1/-1;">Carregando receitas...</p>';
-  const { data, error } = await supabaseClient.from('recipes').select('*').order('created_at',{ascending:false});
+  let { data, error } = await supabaseClient.from('recipes').select('*')
+    .order('sort_order',{ascending:true,nullsFirst:false})
+    .order('created_at',{ascending:false});
+  if(error && /sort_order/i.test(error.message||'')){
+    // A coluna sort_order ainda não existe nesta tabela do Supabase — segue com a ordem antiga por enquanto.
+    sortOrderColumnMissing = true;
+    ({ data, error } = await supabaseClient.from('recipes').select('*').order('created_at',{ascending:false}));
+  }
   if(error){
     grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao Supabase. Confira SUPABASE_URL / SUPABASE_ANON_KEY no código. (${escapeHtml(error.message)})</p>`;
     console.error(error);
@@ -360,6 +375,13 @@ async function loadRecipes(){
     const seed = seedRecipe();
     recipes = [seed];
     await supabaseClient.from('recipes').insert(recipeToDbRow(seed));
+  }
+  if(!sortOrderColumnMissing){
+    const needsMigration = recipes.some(r=>r.order==null);
+    if(needsMigration){
+      recipes.forEach((r,idx)=>{ r.order=idx; });
+      await Promise.all(recipes.map(r=>supabaseClient.from('recipes').update({sort_order:r.order}).eq('id',r.id)));
+    }
   }
   render();
 }
@@ -418,7 +440,7 @@ function render(){
   filtered.forEach((r,i)=>{
     const rot=(i%2===0?-1:1)*(1+(i%3));
     const card=document.createElement('div');
-    card.className='rcard'; card.dataset.cat=r.category;
+    card.className='rcard'; card.dataset.cat=r.category; card.dataset.id=r.id;
     card.style.setProperty('--rot',rot+'deg');
     const imgHtml = r.imageUrl
       ? `<img class="rcard-img" src="${escapeHtml(r.imageUrl)}" alt="${escapeHtml(r.title)}" onerror="this.outerHTML='<div class=&quot;rcard-img placeholder&quot;>🍽️</div>'">`
@@ -426,6 +448,7 @@ function render(){
     card.innerHTML=`
       <div class="tab">${r.category}</div>
       <div class="card-actions">
+        <button class="icon-btn drag-handle" title="Arrastar para reordenar">⠿</button>
         <button class="icon-btn edit-x" title="Editar">✎</button>
         <button class="icon-btn delete-x" title="Excluir">✕</button>
       </div>
@@ -443,8 +466,84 @@ function render(){
       }
     });
     card.querySelector('.edit-x').addEventListener('click', e => { e.stopPropagation(); openForm(r); });
+    card.querySelector('.drag-handle').addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      startCardDrag(card, e);
+    });
     grid.appendChild(card);
   });
+}
+
+/* Drag & drop reorder (funciona com mouse e toque via Pointer Events) */
+function startCardDrag(card, startEvent){
+  const grid=document.getElementById('grid');
+  const rect=card.getBoundingClientRect();
+  const placeholder=document.createElement('div');
+  placeholder.className='rcard-placeholder';
+  placeholder.style.width=rect.width+'px';
+  placeholder.style.height=rect.height+'px';
+  card.parentNode.insertBefore(placeholder, card);
+
+  const offsetX=startEvent.clientX-rect.left;
+  const offsetY=startEvent.clientY-rect.top;
+  card.classList.add('dragging');
+  card.style.position='fixed';
+  card.style.width=rect.width+'px';
+  card.style.left=rect.left+'px';
+  card.style.top=rect.top+'px';
+  card.style.pointerEvents='none';
+
+  function onMove(ev){
+    card.style.left=(ev.clientX-offsetX)+'px';
+    card.style.top=(ev.clientY-offsetY)+'px';
+    const el=document.elementFromPoint(ev.clientX, ev.clientY);
+    const target=el && el.closest('.rcard:not(.dragging)');
+    if(target && target.parentNode===grid){
+      const tRect=target.getBoundingClientRect();
+      const midpoint=tRect.top + tRect.height/2;
+      if(ev.clientY < midpoint) grid.insertBefore(placeholder, target);
+      else grid.insertBefore(placeholder, target.nextSibling);
+    }
+  }
+  function onUp(){
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', onUp);
+    card.classList.remove('dragging');
+    card.style.position=''; card.style.left=''; card.style.top='';
+    card.style.width=''; card.style.pointerEvents='';
+    grid.insertBefore(card, placeholder);
+    placeholder.remove();
+    persistNewOrder();
+  }
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onUp);
+}
+
+function persistNewOrder(){
+  const grid=document.getElementById('grid');
+  const newIds=Array.from(grid.querySelectorAll('.rcard')).map(c=>c.dataset.id);
+  const positions=[];
+  recipes.forEach((r,idx)=>{ if(!activeFilter || r.category===activeFilter) positions.push(idx); });
+  if(positions.length !== newIds.length) return;
+  const idToRecipe={};
+  recipes.forEach(r=>idToRecipe[r.id]=r);
+  const newSubsetOrder=newIds.map(id=>idToRecipe[id]).filter(Boolean);
+  if(newSubsetOrder.length !== positions.length) return;
+  positions.forEach((pos,i)=>{ recipes[pos]=newSubsetOrder[i]; });
+  recipes.forEach((r,idx)=>{ r.order=idx; });
+  saveOrderToDb();
+}
+
+async function saveOrderToDb(){
+  if(sortOrderColumnMissing){
+    console.warn('Adicione a coluna "sort_order" (int8, opcional) na tabela recipes do Supabase para a ordem persistir entre dispositivos.');
+    return;
+  }
+  try{
+    await Promise.all(recipes.map(r=>supabaseClient.from('recipes').update({sort_order:r.order}).eq('id', r.id)));
+  }catch(e){ console.error('Erro ao salvar ordem:', e); }
 }
 
 function openDetail(r){
@@ -699,10 +798,12 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
       savedRecipe=rec;
     }
   } else {
+    const minOrder = recipes.length ? Math.min(...recipes.map(r=>(r.order==null?0:r.order))) : 0;
     savedRecipe={
       id:'r_'+Date.now(), title, category:cat, imageUrl,
       ingredients:cleanIng.length?cleanIng:[{id:'i0',qty:0,unit:'g',name:'(sem ingredientes)',brand:''}],
-      steps:cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}]
+      steps:cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}],
+      order: minOrder - 1
     };
     recipes.unshift(savedRecipe);
   }
@@ -745,17 +846,25 @@ function openShopPicker(){
 function closeShop(){ document.getElementById('shopOverlay').classList.remove('show'); }
 
 function generateShopList(ids){
-  // Merge by ingredient name only, keep any brand info
+  // Merge by ingredient name, somando quantidade por unidade e mantendo marcas
   const merged={};
   recipes.filter(r=>ids.includes(r.id)).forEach(r=>{
     r.ingredients.forEach(ing=>{
       const key=(ing.name||'').trim().toLowerCase();
       if(!key) return;
-      if(!merged[key]) merged[key]={ name:ing.name.trim(), brands:new Set() };
+      if(!merged[key]) merged[key]={ name:ing.name.trim(), brands:new Set(), qtyByUnit:{} };
       if(ing.brand && ing.brand.trim()) merged[key].brands.add(ing.brand.trim());
+      const unit = ing.unit || '';
+      const q = parseQty(ing.qty);
+      merged[key].qtyByUnit[unit] = (merged[key].qtyByUnit[unit]||0) + q;
     });
   });
-  const items=Object.values(merged).map(it=>({ name:it.name, brand:Array.from(it.brands).join(' / ') }));
+  const items=Object.values(merged).map(it=>{
+    const qty = Object.entries(it.qtyByUnit)
+      .map(([unit,q])=>`${formatQty(q)} ${unitLabel(unit,q)}`)
+      .join(' + ');
+    return { name:it.name, brand:Array.from(it.brands).join(' / '), qty };
+  });
   items.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
 
   const c=document.getElementById('shopContent');
@@ -775,8 +884,9 @@ function generateShopList(ids){
   items.forEach((it,idx)=>{
     const li=document.createElement('li');
     const brandHtml = it.brand ? `<span class="brand-tag">— Marca: ${escapeHtml(it.brand)}</span>` : '';
-    li.dataset.plain = it.name + (it.brand?` — Marca: ${it.brand}`:'');
-    li.innerHTML=`<input type="checkbox" id="shop${idx}"><label for="shop${idx}">${escapeHtml(it.name)}${brandHtml}</label>`;
+    const qtyHtml = it.qty ? `<span class="qty-tag">${escapeHtml(it.qty)}</span>` : '';
+    li.dataset.plain = (it.qty?`${it.qty} de `:'') + it.name + (it.brand?` — Marca: ${it.brand}`:'');
+    li.innerHTML=`<input type="checkbox" id="shop${idx}"><label for="shop${idx}">${qtyHtml}${escapeHtml(it.name)}${brandHtml}</label>`;
     li.querySelector('input').addEventListener('change',e=>li.classList.toggle('checked',e.target.checked));
     ul.appendChild(li);
   });
