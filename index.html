@@ -127,10 +127,14 @@
   .form-grid input[type=text],.form-grid input[type=url],.form-grid input[type=number],.form-grid select,.form-grid textarea{width:100%;font-family:'Karla',sans-serif;font-size:0.95rem;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);}
   .form-grid .hint{font-size:0.76rem;color:var(--ink-soft);margin-top:4px;font-weight:500;text-transform:none;letter-spacing:0;}
   .img-preview{margin-top:10px;width:100%;height:130px;object-fit:cover;border-radius:8px;border:1.5px dashed var(--line);display:none;}
-  .ing-row{display:grid;grid-template-columns:70px 110px 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center;}
+  .ing-row{display:grid;grid-template-columns:34px 70px 110px 1fr 1fr 32px;gap:8px;margin-bottom:8px;align-items:center;}
   .ing-row .qty-input{padding:9px 8px;}
   .row-del{width:30px;height:36px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.9rem;}
   .row-del:hover{background:var(--brick);color:#fff;border-color:var(--brick);}
+  .row-move-group{display:flex;flex-direction:column;gap:3px;flex-shrink:0;}
+  .row-move{width:30px;height:16px;border-radius:5px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.6rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;}
+  .row-move:hover:not(:disabled){background:var(--brick);color:#fff;border-color:var(--brick);}
+  .row-move:disabled{opacity:0.25;cursor:default;}
   .row-add{margin-top:4px;background:none;border:1.5px dashed var(--line);color:var(--brick-dark);font-weight:700;font-size:0.82rem;border-radius:8px;padding:8px 12px;cursor:pointer;width:100%;}
   .row-add:hover{border-color:var(--brick);background:var(--kraft);}
   .step-row{position:relative;margin-bottom:8px;}
@@ -177,8 +181,8 @@
   @media (max-width:560px){
     .detail{padding:26px 20px 30px;}
     .detail-img{width:calc(100% + 40px);margin:-26px -20px 18px;}
-    .ing-row{grid-template-columns:1fr 1fr; grid-auto-rows:auto;}
-    .ing-row > *:nth-child(5){grid-column:2;}
+    .ing-row{grid-template-columns:34px 1fr 1fr; grid-auto-rows:auto;}
+    .ing-row > *:nth-child(6){grid-column:3;}
   }
 </style>
 </head>
@@ -667,6 +671,10 @@ function renderIngRows(){
     const row=document.createElement('div'); row.className='ing-row';
     const unitOptions=UNITS.map(u=>`<option value="${u.value}" ${u.value===ing.unit?'selected':''}>${u.singular}</option>`).join('');
     row.innerHTML=`
+      <div class="row-move-group">
+        <button type="button" class="row-move" data-dir="up" title="mover para cima" ${idx===0?'disabled':''}>▲</button>
+        <button type="button" class="row-move" data-dir="down" title="mover para baixo" ${idx===formIngredients.length-1?'disabled':''}>▼</button>
+      </div>
       <input type="text" inputmode="decimal" class="qty-input" placeholder="qtd (ex: 1 1/2)" value="${escapeHtml(String(ing.qty))}">
       <select>${unitOptions}</select>
       <input type="text" placeholder="ingrediente (ex: manteiga com sal)" value="${escapeHtml(ing.name)}">
@@ -677,6 +685,15 @@ function renderIngRows(){
     inputs[1].addEventListener('change', e=>ing.unit=e.target.value);
     inputs[2].addEventListener('input', e=>{ ing.name=e.target.value; refreshStepPreviews(); refreshIngPickers(); });
     inputs[3].addEventListener('input', e=>ing.brand=e.target.value);
+    row.querySelectorAll('.row-move').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const dir=btn.dataset.dir;
+        const swapWith = dir==='up' ? idx-1 : idx+1;
+        if(swapWith<0 || swapWith>=formIngredients.length) return;
+        [formIngredients[idx], formIngredients[swapWith]] = [formIngredients[swapWith], formIngredients[idx]];
+        renderIngRows(); refreshStepPreviews();
+      });
+    });
     row.querySelector('.row-del').addEventListener('click',()=>{
       formIngredients.splice(idx,1);
       if(formIngredients.length===0) addIngredientRow();
@@ -693,10 +710,16 @@ function renderStepRows(){
   const wrap=document.getElementById('stepRows'); wrap.innerHTML='';
   formSteps.forEach((item,idx)=>{
     const row=document.createElement('div');
+    const moveGroupHtml = `
+      <div class="row-move-group">
+        <button type="button" class="row-move" data-dir="up" title="mover para cima" ${idx===0?'disabled':''}>▲</button>
+        <button type="button" class="row-move" data-dir="down" title="mover para baixo" ${idx===formSteps.length-1?'disabled':''}>▼</button>
+      </div>`;
     if(item.type==='section'){
       row.className='step-row step-row-section';
       row.innerHTML=`
         <div class="step-row-inner">
+          ${moveGroupHtml}
           <input type="text" class="section-title-input" placeholder="Título da seção (ex: Calda, Brigadeiro, Montagem)" value="${escapeHtml(item.text)}">
           <button type="button" class="row-del" title="remover">✕</button>
         </div>`;
@@ -708,6 +731,7 @@ function renderStepRows(){
       row.className='step-row';
       row.innerHTML=`
         <div class="step-row-inner">
+          ${moveGroupHtml}
           <textarea placeholder="Ex: Triture o biscoito... (clique num ingrediente abaixo para inserir)">${escapeHtml(item.text)}</textarea>
           <button type="button" class="row-del" title="remover">✕</button>
         </div>
@@ -719,6 +743,15 @@ function renderStepRows(){
         formSteps.splice(idx,1); ensureAtLeastOneStep(); renderStepRows();
       });
     }
+    row.querySelectorAll('.row-move').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const dir=btn.dataset.dir;
+        const swapWith = dir==='up' ? idx-1 : idx+1;
+        if(swapWith<0 || swapWith>=formSteps.length) return;
+        [formSteps[idx], formSteps[swapWith]] = [formSteps[swapWith], formSteps[idx]];
+        renderStepRows();
+      });
+    });
     wrap.appendChild(row);
     if(item.type!=='section') updatePreview(row, item.text);
   });
