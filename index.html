@@ -2,8 +2,29 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Minhas Receitas</title>
+
+<!-- PWA: manifest (Android/Chrome) -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B5502E">
+
+<!-- PWA: ícones padrão / Android -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+
+<!-- PWA: iOS (Adicionar à Tela de Início) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Receitas">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icons/apple-touch-icon-120.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/apple-touch-icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icons/apple-touch-icon-167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-180.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=Karla:wght@400;500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
@@ -16,10 +37,12 @@
     --shadow:0 10px 24px -12px rgba(59,42,34,0.35);
   }
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;overscroll-behavior-x:none;}
   body{
     background:radial-gradient(circle at 1px 1px, rgba(59,42,34,0.06) 1px, transparent 0) 0 0/22px 22px, var(--paper);
     color:var(--ink); font-family:'Karla',sans-serif; min-height:100vh; padding:40px 24px 80px;
+    touch-action: pan-y;
+    width:100%;
   }
   .wrap{max-width:1080px; margin:0 auto;}
   header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:34px;}
@@ -653,8 +676,8 @@ document.getElementById('addSectionRow').addEventListener('click',()=>{ formStep
 document.getElementById('fImage').addEventListener('input',updateImgPreview);
 document.getElementById('openAdd').addEventListener('click',()=>openForm(null));
 document.getElementById('closeForm').addEventListener('click',closeForm);
-document.getElementById('detailOverlay').addEventListener('click',e=>{if(e.target.id==='detailOverlay')closeDetail();});
-document.getElementById('formOverlay').addEventListener('click',e=>{if(e.target.id==='formOverlay')closeForm();});
+/* Os modais de receita (detalhe e formulário) não fecham mais ao clicar no backdrop,
+   apenas pelo botão "X" ou após salvar, para evitar perda acidental de alterações. */
 
 document.getElementById('saveRecipe').addEventListener('click',()=>{
   const title=document.getElementById('fTitle').value.trim();
