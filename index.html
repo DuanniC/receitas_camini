@@ -706,7 +706,7 @@ function openForm(recipe){
   document.getElementById('formErr').style.display='none';
   updateImgPreview();
   formIngredients = recipe ? JSON.parse(JSON.stringify(recipe.ingredients)).map(i=>({brand:'',...i})) : [];
-  formSteps = recipe ? recipe.steps.map(s=>({type:s.type||'step', text:s.text})) : [];
+  formSteps = recipe ? recipe.steps.map(s=>({type:s.type||'step', text:s.text, substeps:(s.substeps||[]).map(ss=>({text:ss.text}))})) : [];
   if(formIngredients.length===0) addIngredientRow();
   ensureAtLeastOneStep();
   renderIngRows(); renderStepRows();
@@ -790,7 +790,9 @@ function renderStepRows(){
           <button type="button" class="row-del" title="remover">✕</button>
         </div>
         ${showIngUI ? '<button type="button" class="ing-toggle" data-role="ing-toggle">+ inserir ingrediente</button><div class="ing-picker"></div>' : ''}
-        <div class="step-preview"></div>`;
+        <div class="step-preview"></div>
+        <div class="substeps-editor" data-role="substeps-editor"></div>
+        <button type="button" class="row-add-substep" data-role="add-substep">+ subitem</button>`;
       const ta=row.querySelector('textarea');
       autoGrowTextarea(ta);
       ta.addEventListener('input',e=>{ formSteps[idx].text=e.target.value; updatePreview(row, e.target.value); autoGrowTextarea(ta); });
@@ -801,6 +803,12 @@ function renderStepRows(){
       if(igt) igt.addEventListener('click',()=>{
         row.classList.toggle('show-ings');
         igt.textContent = row.classList.contains('show-ings') ? '− esconder ingredientes' : '+ inserir ingrediente';
+      });
+      if(!item.substeps) item.substeps=[];
+      renderSubsteps(row, idx);
+      row.querySelector('[data-role=add-substep]').addEventListener('click',()=>{
+        item.substeps.push({text:''});
+        renderSubsteps(row, idx);
       });
     }
     const posInp = row.querySelector('.row-pos');
@@ -819,6 +827,29 @@ function renderStepRows(){
     if(item.type!=='section') updatePreview(row, item.text);
   });
   refreshIngPickers();
+}
+function renderSubsteps(row, idx){
+  const wrap = row.querySelector('[data-role=substeps-editor]');
+  if(!wrap) return;
+  wrap.innerHTML='';
+  const item = formSteps[idx];
+  (item.substeps||[]).forEach((sub, sidx)=>{
+    const srow=document.createElement('div');
+    srow.className='substep-row';
+    srow.innerHTML=`
+      <div class="substep-row-inner">
+        <textarea placeholder="Ex: manteiga">${escapeHtml(sub.text)}</textarea>
+        <button type="button" class="row-del" title="remover">✕</button>
+      </div>`;
+    const sta=srow.querySelector('textarea');
+    autoGrowTextarea(sta);
+    sta.addEventListener('input',e=>{ item.substeps[sidx].text=e.target.value; autoGrowTextarea(sta); });
+    srow.querySelector('.row-del').addEventListener('click',()=>{
+      item.substeps.splice(sidx,1);
+      renderSubsteps(row, idx);
+    });
+    wrap.appendChild(srow);
+  });
 }
 function autoGrowTextarea(ta){
   ta.style.height='auto';
@@ -882,7 +913,7 @@ document.getElementById('reorderStepsBtn').addEventListener('click',e=>{
   e.currentTarget.classList.toggle('active', fc.classList.contains('reorder-steps'));
   e.currentTarget.textContent = fc.classList.contains('reorder-steps') ? 'Concluir' : 'Reordenar';
 });
-document.getElementById('addStepRow').addEventListener('click',()=>{ formSteps.push({type:'step', text:'', _new:true}); renderStepRows(); });
+document.getElementById('addStepRow').addEventListener('click',()=>{ formSteps.push({type:'step', text:'', substeps:[], _new:true}); renderStepRows(); });
 document.getElementById('addSectionRow').addEventListener('click',()=>{ formSteps.push({type:'section', text:''}); renderStepRows(); });
 document.getElementById('fImage').addEventListener('input',updateImgPreview);
 document.getElementById('openAdd').addEventListener('click',()=>openForm(null));
@@ -899,7 +930,14 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
     id:'i'+idx+'_'+Date.now(), qty:parseQty(i.qty), unit:i.unit||'g',
     name:i.name.trim(), brand:(i.brand||'').trim()
   }));
-  const cleanSteps=formSteps.filter(s=>s&&s.text&&s.text.trim()).map((s,idx)=>({id:'s'+idx+'_'+Date.now(), type:s.type||'step', text:s.text.trim()}));
+  const cleanSteps=formSteps.filter(s=>s&&s.text&&s.text.trim()).map((s,idx)=>{
+    const obj={id:'s'+idx+'_'+Date.now(), type:s.type||'step', text:s.text.trim()};
+    if(s.type!=='section'){
+      const subs=(s.substeps||[]).filter(ss=>ss&&ss.text&&ss.text.trim()).map(ss=>({text:ss.text.trim()}));
+      if(subs.length) obj.substeps=subs;
+    }
+    return obj;
+  });
   let savedRecipe;
   if(editingId){
     const rec=recipes.find(r=>r.id===editingId);
