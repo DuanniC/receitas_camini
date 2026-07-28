@@ -264,6 +264,9 @@
       <option>Outros</option>
     </select>
 
+    <label>Rendimento <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
+    <input type="text" id="fYield" placeholder="Ex: Rende 20 cookies de 34g">
+
     <label>Imagem <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
     <input type="url" id="fImage" placeholder="Cole um link de imagem">
     <img id="fImagePreview" class="img-preview">
@@ -379,6 +382,7 @@ function dbRowToRecipe(row){
     title: row.title,
     category: row.category,
     imageUrl: row.image_url || '',
+    yieldText: row.yield_text || '',
     ingredients: row.ingredients || [],
     steps: row.steps || [],
     order: (row.sort_order===undefined || row.sort_order===null) ? null : row.sort_order
@@ -390,6 +394,7 @@ function recipeToDbRow(r){
     title: r.title,
     category: r.category,
     image_url: r.imageUrl || '',
+    yield_text: r.yieldText || '',
     ingredients: r.ingredients,
     steps: r.steps,
     sort_order: (r.order==null ? 0 : r.order)
@@ -438,6 +443,7 @@ function duplicateRecipe(r){
     title: r.title + ' (cópia)',
     category: r.category,
     imageUrl: r.imageUrl || '',
+    yieldText: r.yieldText || '',
     ingredients: (r.ingredients||[]).map((ing,idx)=>({...ing, id:'i'+idx+'_'+stamp})),
     steps: (r.steps||[]).map((st,idx)=>({
       ...st,
@@ -461,6 +467,7 @@ function seedRecipe(){
     title:'Palha Italiana com Nutella',
     category:'Doce',
     imageUrl:'',
+    yieldText:'Rende cerca de 25 pedaços',
     ingredients:[
       {id:'i1', qty:2, unit:'lata', name:'leite condensado', brand:'Piracanjuba'},
       {id:'i2', qty:1, unit:'lata', name:'creme de leite', brand:''},
@@ -621,6 +628,7 @@ function openDetail(r){
     ${r.imageUrl?`<img class="detail-img" src="${escapeHtml(r.imageUrl)}" onerror="this.remove()">`:''}
     <span class="tab2">${r.category}</span>
     <h2>${escapeHtml(r.title)}</h2>
+    ${r.yieldText?`<div style="font-family:'Kalam',cursive;color:var(--ink-soft);font-size:0.95rem;margin:2px 0 14px;transform:rotate(-0.5deg);">🍪 ${escapeHtml(r.yieldText)}</div>`:''}
     <div style="display:flex;gap:16px;margin-bottom:14px;">
       <button class="edit-link" id="editFromDetail" style="margin-bottom:0;">Editar receita</button>
       <button class="edit-link" id="duplicateFromDetail" style="margin-bottom:0;">Duplicar receita</button>
@@ -737,6 +745,7 @@ function openForm(recipe){
   const _ft = document.getElementById('formTag'); if(_ft) _ft.textContent = recipe?'Editar receita':'Nova receita';
   document.getElementById('formHeading').textContent = recipe?'Editar receita':'Nova receita';
   document.getElementById('fImage').value = recipe?(recipe.imageUrl||''):'';
+  document.getElementById('fYield').value = recipe?(recipe.yieldText||''):'';
   document.getElementById('fTitle').value = recipe?recipe.title:'';
   document.getElementById('fCat').value = recipe?recipe.category:'Doce';
   document.getElementById('formErr').style.display='none';
@@ -1034,6 +1043,7 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   if(!title){ document.getElementById('formErr').style.display='block'; return; }
   const cat=document.getElementById('fCat').value;
   const imageUrl=document.getElementById('fImage').value.trim();
+  const yieldText=document.getElementById('fYield').value.trim();
   const cleanIng=formIngredients.filter(i=>i.name&&i.name.trim()).map((i,idx)=>({
     id:'i'+idx+'_'+Date.now(), qty:parseQty(i.qty), unit:i.unit||'g',
     name:i.name.trim(), brand:(i.brand||'').trim()
@@ -1050,7 +1060,7 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   if(editingId){
     const rec=recipes.find(r=>r.id===editingId);
     if(rec){
-      rec.title=title; rec.category=cat; rec.imageUrl=imageUrl;
+      rec.title=title; rec.category=cat; rec.imageUrl=imageUrl; rec.yieldText=yieldText;
       rec.ingredients=cleanIng.length?cleanIng:[{id:'i0',qty:0,unit:'g',name:'(sem ingredientes)',brand:''}];
       rec.steps=cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}];
       savedRecipe=rec;
@@ -1058,7 +1068,7 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   } else {
     const minOrder = recipes.length ? Math.min(...recipes.map(r=>(r.order==null?0:r.order))) : 0;
     savedRecipe={
-      id:'r_'+Date.now(), title, category:cat, imageUrl,
+      id:'r_'+Date.now(), title, category:cat, imageUrl, yieldText,
       ingredients:cleanIng.length?cleanIng:[{id:'i0',qty:0,unit:'g',name:'(sem ingredientes)',brand:''}],
       steps:cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}],
       order: minOrder - 1
