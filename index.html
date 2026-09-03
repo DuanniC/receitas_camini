@@ -264,8 +264,12 @@
       <option>Outros</option>
     </select>
 
-    <label>Rendimento <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
-    <input type="text" id="fYield" placeholder="Ex: Rende 20 cookies de 34g">
+    <label>Rendimento base <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
+    <div style="display:flex; gap:10px;">
+      <input type="number" id="fYieldQty" placeholder="Ex: 37" min="0" step="any" style="flex:1;">
+      <input type="text" id="fYieldUnit" placeholder="Ex: cookies" style="flex:2;">
+    </div>
+    <div class="hint" style="margin-top:6px;opacity:.75;">Esse é o rendimento na receita 1x. Quando você multiplicar a receita (2x, 3x, 0,5x...), o rendimento é recalculado sozinho.</div>
 
     <label>Imagem <span style="font-weight:400;text-transform:none;color:var(--ink-soft);opacity:.7;">(opcional)</span></label>
     <input type="url" id="fImage" placeholder="Cole um link de imagem">
@@ -382,6 +386,8 @@ function dbRowToRecipe(row){
     title: row.title,
     category: row.category,
     imageUrl: row.image_url || '',
+    yieldQty: (row.yield_qty===undefined || row.yield_qty===null || row.yield_qty==='') ? null : Number(row.yield_qty),
+    yieldUnit: row.yield_unit || '',
     yieldText: row.yield_text || '',
     ingredients: row.ingredients || [],
     steps: row.steps || [],
@@ -394,6 +400,8 @@ function recipeToDbRow(r){
     title: r.title,
     category: r.category,
     image_url: r.imageUrl || '',
+    yield_qty: (r.yieldQty===undefined || r.yieldQty===null || r.yieldQty==='') ? null : Number(r.yieldQty),
+    yield_unit: r.yieldUnit || '',
     yield_text: r.yieldText || '',
     ingredients: r.ingredients,
     steps: r.steps,
@@ -433,7 +441,12 @@ async function loadRecipes(){
 }
 async function saveRecipeToDb(r){
   const { error } = await supabaseClient.from('recipes').upsert(recipeToDbRow(r));
-  if(error){ alert('Erro ao salvar no Supabase: '+error.message); console.error(error); }
+  if(error){
+    if(/yield_qty|yield_unit/i.test(error.message||'')){
+      console.warn('Adicione as colunas "yield_qty" (numeric, opcional) e "yield_unit" (text, opcional) na tabela recipes do Supabase para o rendimento automático funcionar e persistir entre dispositivos.');
+    }
+    alert('Erro ao salvar no Supabase: '+error.message); console.error(error);
+  }
 }
 function duplicateRecipe(r){
   const stamp = Date.now();
@@ -443,6 +456,8 @@ function duplicateRecipe(r){
     title: r.title + ' (cópia)',
     category: r.category,
     imageUrl: r.imageUrl || '',
+    yieldQty: (r.yieldQty===undefined || r.yieldQty===null) ? null : r.yieldQty,
+    yieldUnit: r.yieldUnit || '',
     yieldText: r.yieldText || '',
     ingredients: (r.ingredients||[]).map((ing,idx)=>({...ing, id:'i'+idx+'_'+stamp})),
     steps: (r.steps||[]).map((st,idx)=>({
@@ -467,7 +482,9 @@ function seedRecipe(){
     title:'Palha Italiana com Nutella',
     category:'Doce',
     imageUrl:'',
-    yieldText:'Rende cerca de 25 pedaços',
+    yieldQty:25,
+    yieldUnit:'pedaços',
+    yieldText:'',
     ingredients:[
       {id:'i1', qty:2, unit:'lata', name:'leite condensado', brand:'Piracanjuba'},
       {id:'i2', qty:1, unit:'lata', name:'creme de leite', brand:''},
@@ -614,7 +631,6 @@ function persistNewOrder(){
 async function saveOrderToDb(){
   if(sortOrderColumnMissing){
     console.warn('Adicione a coluna "sort_order" (int8, opcional) na tabela recipes do Supabase para a ordem persistir entre dispositivos.');
-    return;
   }
   try{
     await Promise.all(recipes.map(r=>supabaseClient.from('recipes').update({sort_order:r.order}).eq('id', r.id)));
@@ -628,7 +644,7 @@ function openDetail(r){
     ${r.imageUrl?`<img class="detail-img" src="${escapeHtml(r.imageUrl)}" onerror="this.remove()">`:''}
     <span class="tab2">${r.category}</span>
     <h2>${escapeHtml(r.title)}</h2>
-    ${r.yieldText?`<div style="font-family:'Kalam',cursive;color:var(--ink-soft);font-size:0.95rem;margin:2px 0 14px;transform:rotate(-0.5deg);">🍪 ${escapeHtml(r.yieldText)}</div>`:''}
+    <div id="yieldDisplay" style="font-family:'Kalam',cursive;color:var(--ink-soft);font-size:0.95rem;margin:2px 0 14px;transform:rotate(-0.5deg);display:none;"></div>
     <div style="display:flex;gap:16px;margin-bottom:14px;">
       <button class="edit-link" id="editFromDetail" style="margin-bottom:0;">Editar receita</button>
       <button class="edit-link" id="duplicateFromDetail" style="margin-bottom:0;">Duplicar receita</button>
@@ -650,6 +666,19 @@ function openDetail(r){
     <div class="collapsible open" id="stepsBody"><div id="stepsContainer"></div></div>`;
   let mult=1;
   function renderAll(){
+    const yieldEl=c.querySelector('#yieldDisplay');
+    if(yieldEl){
+      if(r.yieldQty!=null && r.yieldQty!==''){
+        const finalYield=formatQty(Number(r.yieldQty)*mult);
+        yieldEl.textContent=`🍪 Rende ${finalYield}${r.yieldUnit?(' '+r.yieldUnit):''}`;
+        yieldEl.style.display='';
+      } else if(r.yieldText){
+        yieldEl.textContent=`🍪 ${r.yieldText}`;
+        yieldEl.style.display='';
+      } else {
+        yieldEl.style.display='none';
+      }
+    }
     const ingList=c.querySelector('#ingList'); ingList.innerHTML='';
     r.ingredients.forEach((ing,idx)=>{
       const li=document.createElement('li');
@@ -745,7 +774,8 @@ function openForm(recipe){
   const _ft = document.getElementById('formTag'); if(_ft) _ft.textContent = recipe?'Editar receita':'Nova receita';
   document.getElementById('formHeading').textContent = recipe?'Editar receita':'Nova receita';
   document.getElementById('fImage').value = recipe?(recipe.imageUrl||''):'';
-  document.getElementById('fYield').value = recipe?(recipe.yieldText||''):'';
+  document.getElementById('fYieldQty').value = (recipe && recipe.yieldQty!=null) ? recipe.yieldQty : '';
+  document.getElementById('fYieldUnit').value = recipe?(recipe.yieldUnit||''):'';
   document.getElementById('fTitle').value = recipe?recipe.title:'';
   document.getElementById('fCat').value = recipe?recipe.category:'Doce';
   document.getElementById('formErr').style.display='none';
@@ -1043,7 +1073,9 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   if(!title){ document.getElementById('formErr').style.display='block'; return; }
   const cat=document.getElementById('fCat').value;
   const imageUrl=document.getElementById('fImage').value.trim();
-  const yieldText=document.getElementById('fYield').value.trim();
+  const yieldQtyRaw=document.getElementById('fYieldQty').value;
+  const yieldQty=(yieldQtyRaw===''||yieldQtyRaw==null)?null:parseQty(yieldQtyRaw);
+  const yieldUnit=document.getElementById('fYieldUnit').value.trim();
   const cleanIng=formIngredients.filter(i=>i.name&&i.name.trim()).map((i,idx)=>({
     id:'i'+idx+'_'+Date.now(), qty:parseQty(i.qty), unit:i.unit||'g',
     name:i.name.trim(), brand:(i.brand||'').trim()
@@ -1060,7 +1092,7 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   if(editingId){
     const rec=recipes.find(r=>r.id===editingId);
     if(rec){
-      rec.title=title; rec.category=cat; rec.imageUrl=imageUrl; rec.yieldText=yieldText;
+      rec.title=title; rec.category=cat; rec.imageUrl=imageUrl; rec.yieldQty=yieldQty; rec.yieldUnit=yieldUnit;
       rec.ingredients=cleanIng.length?cleanIng:[{id:'i0',qty:0,unit:'g',name:'(sem ingredientes)',brand:''}];
       rec.steps=cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}];
       savedRecipe=rec;
@@ -1068,7 +1100,7 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
   } else {
     const minOrder = recipes.length ? Math.min(...recipes.map(r=>(r.order==null?0:r.order))) : 0;
     savedRecipe={
-      id:'r_'+Date.now(), title, category:cat, imageUrl, yieldText,
+      id:'r_'+Date.now(), title, category:cat, imageUrl, yieldQty, yieldUnit,
       ingredients:cleanIng.length?cleanIng:[{id:'i0',qty:0,unit:'g',name:'(sem ingredientes)',brand:''}],
       steps:cleanSteps.length?cleanSteps:[{id:'s0',type:'step',text:'(sem modo de preparo)'}],
       order: minOrder - 1
