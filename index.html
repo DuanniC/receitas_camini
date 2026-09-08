@@ -139,8 +139,20 @@
    .ing-row{display:grid;grid-template-columns:28px 70px 110px 1fr 1fr 32px;gap:8px;margin-bottom:10px;align-items:center;}
    .ing-row .qty-input{padding:9px 8px;}
    @media (max-width:560px){
-     .ing-row{grid-template-columns:26px 62px 92px 1fr 30px;gap:6px;}
-     .ing-row .ing-brand{grid-column:2 / -1;}
+     .ing-row{
+       grid-template-columns:30px 84px 1fr 32px;
+       grid-template-areas:
+         "handle qty unit del"
+         "name name name name"
+         "brand brand brand brand";
+       gap:6px;
+     }
+     .ing-row .row-handle{grid-area:handle;}
+     .ing-row .qty-input{grid-area:qty;}
+     .ing-row .unit-select{grid-area:unit;}
+     .ing-row .row-del{grid-area:del;justify-self:end;}
+     .ing-row .ing-name{grid-area:name;width:100%;}
+     .ing-row .ing-brand{grid-area:brand;width:100%;}
    }
    .row-del{width:30px;height:36px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-soft);cursor:pointer;font-size:0.9rem;}
    .row-del:hover{background:var(--brick);color:#fff;border-color:var(--brick);}
@@ -216,8 +228,6 @@
   @media (max-width:560px){
     .detail{padding:26px 20px 30px;}
     .detail-img{width:calc(100% + 40px);margin:-26px -20px 18px;}
-    .ing-row{grid-template-columns:34px 1fr 1fr; grid-auto-rows:auto;}
-    .ing-row > *:nth-child(6){grid-column:3;}
   }
 </style></head>
 <body>
@@ -804,8 +814,8 @@ function renderIngRows(){
     row.innerHTML=`
       <button type="button" class="row-handle" title="Arraste para reordenar" aria-label="Reordenar ingrediente">⠿</button>
       <input type="text" inputmode="decimal" class="qty-input" placeholder="qtd (ex: 1 1/2)" value="${escapeHtml(String(ing.qty))}">
-      <select>${unitOptions}</select>
-      <input type="text" placeholder="ingrediente (ex: manteiga com sal)" value="${escapeHtml(ing.name)}">
+      <select class="unit-select">${unitOptions}</select>
+      <input type="text" class="ing-name" placeholder="ingrediente (ex: manteiga com sal)" value="${escapeHtml(ing.name)}">
       <input type="text" class="ing-brand" placeholder="marca (opcional)" value="${escapeHtml(ing.brand||'')}">
       <button type="button" class="row-del" title="remover">✕</button>`;
     attachRowDrag(row, '.row-handle', {
