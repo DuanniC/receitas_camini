@@ -307,21 +307,58 @@
 
 <div class="overlay" id="shopOverlay"><div class="detail" id="shopContent"></div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-/* ====== CONFIGURAÇÃO DO SUPABASE ======
-   Troque os valores abaixo pelos dados do SEU projeto Supabase
-   (Project Settings > API, no painel do Supabase).
+/* ====== CONFIGURAÇÃO DO JSONBIN.IO ======
+   1) Crie uma conta grátis em https://jsonbin.io
+   2) No painel, vá em "API Keys" e copie sua X-MASTER-KEY, cole abaixo.
+   3) Deixe JSONBIN_BIN_ID vazio ('') na primeira vez que abrir o app.
+      O app vai criar o "bin" sozinho e mostrar um alerta com o ID.
+      Copie esse ID e cole aqui embaixo, assim o mesmo bin (mesmas receitas)
+      é usado sempre, em qualquer dispositivo/navegador.
    Depois de preencher, salve o arquivo e suba pro GitHub. */
-const SUPABASE_URL = 'https://ljxvxepdfrbcqvaqkxku.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqeHZ4ZXBkZnJiY3F2YXFreGt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1NTUzODcsImV4cCI6MjEwMDEzMTM4N30.ofZ2rRz9E_-igdfEkB8WWTxhO7yL9mZEBJ1n-D7Fkyk';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const JSONBIN_API_KEY = '$2a$10$/kQFQFwoTsiJVzWAzDam0OGSBs8OFoK/REFReE74lP4zvvo56Q9Pe';
+let JSONBIN_BIN_ID = '6aa7d410ac6210605acb0aa4'; // depois do primeiro uso, cole aqui o ID do bin criado
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
+
+async function jsonbinCreateBin(data){
+  const res = await fetch(JSONBIN_BASE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_API_KEY,
+      'X-Bin-Name': 'le-petit-chef-recipes'
+    },
+    body: JSON.stringify(data)
+  });
+  if(!res.ok) throw new Error('Falha ao criar o bin (status '+res.status+')');
+  const json = await res.json();
+  return json.metadata.id;
+}
+async function jsonbinRead(){
+  const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}/latest`, {
+    headers: { 'X-Master-Key': JSONBIN_API_KEY }
+  });
+  if(!res.ok) throw new Error('Falha ao ler o bin (status '+res.status+')');
+  const json = await res.json();
+  return json.record;
+}
+async function jsonbinWrite(data){
+  const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Master-Key': JSONBIN_API_KEY
+    },
+    body: JSON.stringify(data)
+  });
+  if(!res.ok) throw new Error('Falha ao salvar no bin (status '+res.status+')');
+  return res.json();
+}
 </script>
 <script>
 const STORAGE_KEY = 'minhas_receitas_v2';
 let recipes = [];
 let activeFilter = null;
-let sortOrderColumnMissing = false;
 let editingId = null;
 let formIngredients = [];
 let formSteps = [];
@@ -390,73 +427,52 @@ function renderStepText(text, ingredients, mult, asHtml){
   });
 }
 
-function dbRowToRecipe(row){
-  return {
-    id: row.id,
-    title: row.title,
-    category: row.category,
-    imageUrl: row.image_url || '',
-    yieldQty: (row.yield_qty===undefined || row.yield_qty===null || row.yield_qty==='') ? null : Number(row.yield_qty),
-    yieldUnit: row.yield_unit || '',
-    yieldText: row.yield_text || '',
-    ingredients: row.ingredients || [],
-    steps: row.steps || [],
-    order: (row.sort_order===undefined || row.sort_order===null) ? null : row.sort_order
-  };
-}
-function recipeToDbRow(r){
-  return {
-    id: r.id,
-    title: r.title,
-    category: r.category,
-    image_url: r.imageUrl || '',
-    yield_qty: (r.yieldQty===undefined || r.yieldQty===null || r.yieldQty==='') ? null : Number(r.yieldQty),
-    yield_unit: r.yieldUnit || '',
-    yield_text: r.yieldText || '',
-    ingredients: r.ingredients,
-    steps: r.steps,
-    sort_order: (r.order==null ? 0 : r.order)
-  };
-}
 async function loadRecipes(){
   const grid=document.getElementById('grid');
   grid.innerHTML='<p style="color:var(--ink-soft);grid-column:1/-1;">Carregando receitas...</p>';
-  let { data, error } = await supabaseClient.from('recipes').select('*')
-    .order('sort_order',{ascending:true,nullsFirst:false})
-    .order('created_at',{ascending:false});
-  if(error && /sort_order/i.test(error.message||'')){
-    // A coluna sort_order ainda não existe nesta tabela do Supabase — segue com a ordem antiga por enquanto.
-    sortOrderColumnMissing = true;
-    ({ data, error } = await supabaseClient.from('recipes').select('*').order('created_at',{ascending:false}));
-  }
-  if(error){
-    grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao Supabase. Confira SUPABASE_URL / SUPABASE_ANON_KEY no código. (${escapeHtml(error.message)})</p>`;
-    console.error(error);
-    return;
-  }
-  recipes = (data||[]).map(dbRowToRecipe);
-  if(recipes.length === 0){
-    const seed = seedRecipe();
-    recipes = [seed];
-    await supabaseClient.from('recipes').insert(recipeToDbRow(seed));
-  }
-  if(!sortOrderColumnMissing){
-    const needsMigration = recipes.some(r=>r.order==null);
-    if(needsMigration){
-      recipes.forEach((r,idx)=>{ r.order=idx; });
-      await Promise.all(recipes.map(r=>supabaseClient.from('recipes').update({sort_order:r.order}).eq('id',r.id)));
+  try{
+    if(!JSONBIN_BIN_ID){
+      // Primeira vez rodando: cria o bin no JSONBin com uma receita de exemplo.
+      const seed = seedRecipe();
+      seed.order = 0;
+      const newId = await jsonbinCreateBin([seed]);
+      JSONBIN_BIN_ID = newId;
+      recipes = [seed];
+      alert('Bin criado no JSONBin! Copie este ID e cole na constante JSONBIN_BIN_ID no código, para usar sempre o mesmo:\n\n' + newId);
+      console.log('JSONBIN_BIN_ID:', newId);
+    } else {
+      const data = await jsonbinRead();
+      recipes = Array.isArray(data) ? data : [];
+      if(recipes.length === 0){
+        const seed = seedRecipe();
+        seed.order = 0;
+        recipes = [seed];
+        await jsonbinWrite(recipes);
+      }
+      const needsMigration = recipes.some(r=>r.order==null);
+      if(needsMigration){
+        recipes.forEach((r,idx)=>{ r.order=idx; });
+        await jsonbinWrite(recipes);
+      }
     }
+  }catch(err){
+    grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao JSONBin. Confira JSONBIN_API_KEY / JSONBIN_BIN_ID no código. (${escapeHtml(err.message)})</p>`;
+    console.error(err);
+    return;
   }
   render();
 }
-async function saveRecipeToDb(r){
-  const { error } = await supabaseClient.from('recipes').upsert(recipeToDbRow(r));
-  if(error){
-    if(/yield_qty|yield_unit/i.test(error.message||'')){
-      console.warn('Adicione as colunas "yield_qty" (numeric, opcional) e "yield_unit" (text, opcional) na tabela recipes do Supabase para o rendimento automático funcionar e persistir entre dispositivos.');
-    }
-    alert('Erro ao salvar no Supabase: '+error.message); console.error(error);
+async function persistRecipes(){
+  try{
+    await jsonbinWrite(recipes);
+  }catch(err){
+    alert('Erro ao salvar no JSONBin: '+err.message); console.error(err);
   }
+}
+async function saveRecipeToDb(r){
+  // O array `recipes` já foi atualizado em memória antes desta chamada;
+  // no JSONBin salvamos sempre a lista inteira de uma vez.
+  await persistRecipes();
 }
 function duplicateRecipe(r){
   const stamp = Date.now();
@@ -483,8 +499,8 @@ function duplicateRecipe(r){
   return copy;
 }
 async function deleteRecipeFromDb(id){
-  const { error } = await supabaseClient.from('recipes').delete().eq('id', id);
-  if(error){ alert('Erro ao excluir no Supabase: '+error.message); console.error(error); }
+  // `recipes` já foi filtrado (sem o item excluído) antes desta chamada.
+  await persistRecipes();
 }
 function seedRecipe(){
   return {
@@ -639,12 +655,7 @@ function persistNewOrder(){
 }
 
 async function saveOrderToDb(){
-  if(sortOrderColumnMissing){
-    console.warn('Adicione a coluna "sort_order" (int8, opcional) na tabela recipes do Supabase para a ordem persistir entre dispositivos.');
-  }
-  try{
-    await Promise.all(recipes.map(r=>supabaseClient.from('recipes').update({sort_order:r.order}).eq('id', r.id)));
-  }catch(e){ console.error('Erro ao salvar ordem:', e); }
+  await persistRecipes();
 }
 
 function openDetail(r){
