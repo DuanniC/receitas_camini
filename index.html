@@ -19,9 +19,6 @@
 <meta name="theme-color" content="#B5502E">
 
 
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Receitas">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,7 +36,7 @@
   html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;overscroll-behavior-x:none;}
   body{
     background:radial-gradient(circle at 1px 1px, rgba(59,42,34,0.06) 1px, transparent 0) 0 0/22px 22px, var(--paper);
-    color:var(--ink); font-family:'Karla',sans-serif; min-height:100vh; padding:40px 24px 80px;
+    color:var(--ink); font-family:'Karla',sans-serif; min-height:100vh; padding:calc(40px + env(safe-area-inset-top, 0px)) 24px calc(80px + env(safe-area-inset-bottom, 0px));
     touch-action: pan-y;
     width:100%;
   }
@@ -81,7 +78,7 @@
   .empty-state{text-align:center;padding:70px 20px;color:var(--ink-soft);}
   .empty-state .em{font-size:2.4rem;margin-bottom:10px;}
   .empty-state h2{font-family:'Fraunces',serif;color:var(--ink);margin:0 0 8px;}
-  .overlay{overscroll-behavior:contain;position:fixed;inset:0;background:rgba(59,42,34,0.45);display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;z-index:50;}
+  .overlay{overscroll-behavior:contain;position:fixed;inset:0;background:rgba(59,42,34,0.45);display:none;align-items:flex-start;justify-content:center;padding:calc(40px + env(safe-area-inset-top, 0px)) 20px calc(40px + env(safe-area-inset-bottom, 0px));overflow-y:auto;z-index:50;}
   .overlay.show{display:flex;}
   .detail{background:var(--card);max-width:640px;width:100%;border-radius:14px;box-shadow:0 30px 60px -20px rgba(0,0,0,0.5);padding:34px 34px 40px;position:relative;animation:pop .22s ease;}
   @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.98);} to{opacity:1;transform:translateY(0) scale(1);}}
@@ -131,7 +128,7 @@
    #formContent{padding:32px 30px 40px;}
    #formContent h2{font-family:'Fraunces',serif;font-weight:900;font-size:1.7rem;margin:0 0 6px !important;}
    @media (max-width:560px){
-     .overlay{padding:12px 8px;}
+     .overlay{padding:calc(16px + env(safe-area-inset-top, 0px)) 8px calc(16px + env(safe-area-inset-bottom, 0px));}
      #formContent{padding:22px 18px 28px;border-radius:12px;}
      #formContent h2{font-size:1.4rem;}
    }
@@ -501,8 +498,9 @@ function loadPantry(){
   }catch(e){ pantry = []; }
 }
 function savePantry(){
-  try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }
+  try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); } // cópia local (cache)
   catch(e){ console.error('Não foi possível salvar a despensa:', e); }
+  if(typeof persistRecipes==='function') persistRecipes(); // grava também no JSONBin
 }
 function pantryFind(name){
   const key=(name||'').trim().toLowerCase();
@@ -593,25 +591,39 @@ async function loadRecipes(){
       // Primeira vez rodando: cria o bin no JSONBin com uma receita de exemplo.
       const seed = seedRecipe();
       seed.order = 0;
-      const newId = await jsonbinCreateBin([seed]);
+      const newId = await jsonbinCreateBin({recipes:[seed], pantry:pantry});
       JSONBIN_BIN_ID = newId;
       recipes = [seed];
       alert('Bin criado no JSONBin! Copie este ID e cole na constante JSONBIN_BIN_ID no código, para usar sempre o mesmo:\n\n' + newId);
       console.log('JSONBIN_BIN_ID:', newId);
+      dbReady = true;
     } else {
       const data = await jsonbinRead();
-      recipes = Array.isArray(data) ? data : [];
+      let needsWrite = false;
+      if(Array.isArray(data)){
+        // Formato antigo (só receitas): mantém a despensa local e migra pro bin
+        recipes = data;
+        needsWrite = true;
+      } else {
+        recipes = Array.isArray(data && data.recipes) ? data.recipes : [];
+        if(data && Array.isArray(data.pantry)){
+          pantry = data.pantry;
+          try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }catch(e){}
+        } else if(pantry.length){ needsWrite = true; }
+      }
       if(recipes.length === 0){
         const seed = seedRecipe();
         seed.order = 0;
         recipes = [seed];
-        await jsonbinWrite(recipes);
+        needsWrite = true;
       }
-      const needsMigration = recipes.some(r=>r.order==null);
-      if(needsMigration){
-        recipes.forEach((r,idx)=>{ r.order=idx; });
-        await jsonbinWrite(recipes);
+      if(recipes.some(r=>r.order==null)){
+        recipes.forEach((r,idx)=>{ if(r.order==null) r.order=idx; });
+        needsWrite = true;
       }
+      dbReady = true;
+      if(needsWrite) await jsonbinWrite(dbPayload());
+      renderPantry();
     }
   }catch(err){
     grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao JSONBin. Confira JSONBIN_API_KEY / JSONBIN_BIN_ID no código. (${escapeHtml(err.message)})</p>`;
@@ -620,9 +632,12 @@ async function loadRecipes(){
   }
   render();
 }
+let dbReady = false; // evita sobrescrever o bin antes de ler os dados
+function dbPayload(){ return { recipes: recipes, pantry: pantry }; }
 async function persistRecipes(){
+  if(!dbReady) return;
   try{
-    await jsonbinWrite(recipes);
+    await jsonbinWrite(dbPayload());
   }catch(err){
     alert('Erro ao salvar no JSONBin: '+err.message); console.error(err);
   }
