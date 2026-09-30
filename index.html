@@ -377,13 +377,13 @@ const JSONBIN_API_KEY = '$2a$10$/kQFQFwoTsiJVzWAzDam0OGSBs8OFoK/REFReE74lP4zvvo5
 let JSONBIN_BIN_ID = '6aa7d410ac6210605acb0aa4'; // depois do primeiro uso, cole aqui o ID do bin criado
 const JSONBIN_BASE = 'https://api.jsonbin.io/v3/b';
 
-async function jsonbinCreateBin(data){
+async function jsonbinCreateBin(data, name){
   const res = await fetch(JSONBIN_BASE, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Master-Key': JSONBIN_API_KEY,
-      'X-Bin-Name': 'le-petit-chef-recipes'
+      'X-Bin-Name': name || 'le-petit-chef-recipes'
     },
     body: JSON.stringify(data)
   });
@@ -391,16 +391,16 @@ async function jsonbinCreateBin(data){
   const json = await res.json();
   return json.metadata.id;
 }
-async function jsonbinRead(){
-  const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}/latest`, {
+async function jsonbinRead(id){
+  const res = await fetch(`${JSONBIN_BASE}/${id || JSONBIN_BIN_ID}/latest`, {
     headers: { 'X-Master-Key': JSONBIN_API_KEY }
   });
   if(!res.ok) throw new Error('Falha ao ler o bin (status '+res.status+')');
   const json = await res.json();
   return json.record;
 }
-async function jsonbinWrite(data){
-  const res = await fetch(`${JSONBIN_BASE}/${JSONBIN_BIN_ID}`, {
+async function jsonbinWrite(data, id){
+  const res = await fetch(`${JSONBIN_BASE}/${id || JSONBIN_BIN_ID}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -500,7 +500,7 @@ function loadPantry(){
 function savePantry(){
   try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); } // cópia local (cache)
   catch(e){ console.error('Não foi possível salvar a despensa:', e); }
-  if(typeof persistRecipes==='function') persistRecipes(); // grava também no JSONBin
+  if(typeof persistPantry==='function') persistPantry(); // grava também no JSONBin (bin próprio da despensa)
 }
 function pantryFind(name){
   const key=(name||'').trim().toLowerCase();
@@ -583,6 +583,16 @@ function openPantryForm(item){
 }
 function closePantryForm(){ document.getElementById('pantryFormOverlay').classList.remove('show'); editingPantryId=null; }
 
+/* O bin de RECEITAS é sempre uma lista simples (array) de receitas — formato original.
+   A despensa fica em OUTRO bin, para nunca misturar formatos nem apagar receitas. */
+let dbReady = false; // só permite gravar depois de ler os dados com sucesso
+const RECIPES_BACKUP_KEY = 'receitas_backup_max';
+function readRecipesBackup(){ try{ const b=JSON.parse(localStorage.getItem(RECIPES_BACKUP_KEY)||'[]'); return Array.isArray(b)?b:[]; }catch(e){ return []; } }
+function backupRecipes(list){ // cópia de segurança local: só é atualizada se não diminuir
+  try{ if(list.length >= readRecipesBackup().length) localStorage.setItem(RECIPES_BACKUP_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function recipesPayload(){ return recipes.length ? recipes : [{_empty:true}]; } // JSONBin rejeita bin em branco
 async function loadRecipes(){
   const grid=document.getElementById('grid');
   grid.innerHTML='<p style="color:var(--ink-soft);grid-column:1/-1;">Carregando receitas...</p>';
@@ -591,7 +601,7 @@ async function loadRecipes(){
       // Primeira vez rodando: cria o bin no JSONBin com uma receita de exemplo.
       const seed = seedRecipe();
       seed.order = 0;
-      const newId = await jsonbinCreateBin({recipes:[seed], pantry:pantry});
+      const newId = await jsonbinCreateBin([seed]);
       JSONBIN_BIN_ID = newId;
       recipes = [seed];
       alert('Bin criado no JSONBin! Copie este ID e cole na constante JSONBIN_BIN_ID no código, para usar sempre o mesmo:\n\n' + newId);
@@ -601,46 +611,88 @@ async function loadRecipes(){
       const data = await jsonbinRead();
       let needsWrite = false;
       if(Array.isArray(data)){
-        // Formato antigo (só receitas): mantém a despensa local e migra pro bin
-        recipes = data;
-        needsWrite = true;
-      } else {
-        recipes = Array.isArray(data && data.recipes) ? data.recipes : [];
-        if(data && Array.isArray(data.pantry)){
+        recipes = data.filter(r=>r && !r._empty);
+      } else if(data && Array.isArray(data.recipes)){
+        // Formato {recipes, pantry} (versão anterior): volta para lista simples
+        recipes = data.recipes.filter(r=>r && !r._empty);
+        if(Array.isArray(data.pantry) && data.pantry.length && pantry.length===0){
           pantry = data.pantry;
           try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }catch(e){}
-        } else if(pantry.length){ needsWrite = true; }
-      }
-      if(recipes.length === 0){
-        const seed = seedRecipe();
-        seed.order = 0;
-        recipes = [seed];
+        }
         needsWrite = true;
+      } else {
+        // Formato desconhecido: NUNCA sobrescrever. Mostra erro e não grava nada.
+        throw new Error('formato inesperado no bin — nada foi alterado');
+      }
+      // Proteção: se o banco tem bem menos receitas que a cópia deste aparelho, oferece restaurar
+      const backup = readRecipesBackup();
+      if(backup.length >= 3 && recipes.length <= 1 && recipes.length < backup.length){
+        if(confirm('O banco tem só '+recipes.length+' receita(s), mas este aparelho guarda uma cópia com '+backup.length+'.\n\nRestaurar a cópia?')){
+          recipes = backup; needsWrite = true;
+        }
       }
       if(recipes.some(r=>r.order==null)){
         recipes.forEach((r,idx)=>{ if(r.order==null) r.order=idx; });
         needsWrite = true;
       }
       dbReady = true;
-      if(needsWrite) await jsonbinWrite(dbPayload());
-      renderPantry();
+      if(needsWrite) await jsonbinWrite(recipesPayload());
     }
+    backupRecipes(recipes);
   }catch(err){
     grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao JSONBin. Confira JSONBIN_API_KEY / JSONBIN_BIN_ID no código. (${escapeHtml(err.message)})</p>`;
     console.error(err);
     return;
   }
   render();
+  syncPantryRemote();
 }
-let dbReady = false; // evita sobrescrever o bin antes de ler os dados
-function dbPayload(){ return { recipes: recipes, pantry: pantry }; }
 async function persistRecipes(){
   if(!dbReady) return;
   try{
-    await jsonbinWrite(dbPayload());
+    await jsonbinWrite(recipesPayload());
+    try{ localStorage.setItem(RECIPES_BACKUP_KEY, JSON.stringify(recipes)); }catch(e){} // mudança feita por você: a cópia acompanha
   }catch(err){
     alert('Erro ao salvar no JSONBin: '+err.message); console.error(err);
   }
+}
+
+/* ====== Despensa no JSONBin (bin separado) ======
+   Deixe vazio na 1ª vez: o app cria o bin e mostra o ID para você colar aqui. */
+let JSONBIN_PANTRY_BIN_ID = '';
+const PANTRY_BIN_LS = 'despensa_bin_id';
+let pantryReady = false;
+function pantryPayload(){ return pantry.length ? pantry : [{_empty:true}]; } // o JSONBin não aceita bin em branco
+async function syncPantryRemote(){
+  try{
+    if(!JSONBIN_PANTRY_BIN_ID){ try{ JSONBIN_PANTRY_BIN_ID = localStorage.getItem(PANTRY_BIN_LS) || ''; }catch(e){} }
+    if(!JSONBIN_PANTRY_BIN_ID){
+      const id = await jsonbinCreateBin(pantryPayload(), 'le-petit-chef-despensa');
+      JSONBIN_PANTRY_BIN_ID = id;
+      try{ localStorage.setItem(PANTRY_BIN_LS, id); }catch(e){}
+      pantryReady = true;
+      alert('Bin da despensa criado! Cole este ID na constante JSONBIN_PANTRY_BIN_ID no código para sincronizar em todos os aparelhos:\n\n'+id);
+      console.log('JSONBIN_PANTRY_BIN_ID:', id);
+      return;
+    }
+    const data = await jsonbinRead(JSONBIN_PANTRY_BIN_ID);
+    if(Array.isArray(data)){
+      const remote = data.filter(p=>p && p.name);
+      if(remote.length===0 && pantry.length){
+        await jsonbinWrite(pantryPayload(), JSONBIN_PANTRY_BIN_ID); // sobe o que só existe neste aparelho
+      } else {
+        pantry = remote;
+        try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }catch(e){}
+      }
+      pantryReady = true;
+      renderPantry();
+    }
+  }catch(err){ console.error('Despensa: não sincronizou', err); }
+}
+async function persistPantry(){
+  if(!pantryReady || !JSONBIN_PANTRY_BIN_ID) return;
+  try{ await jsonbinWrite(pantryPayload(), JSONBIN_PANTRY_BIN_ID); }
+  catch(err){ alert('Erro ao salvar a despensa no JSONBin: '+err.message); console.error(err); }
 }
 async function saveRecipeToDb(r){
   // O array `recipes` já foi atualizado em memória antes desta chamada;
