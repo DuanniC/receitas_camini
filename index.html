@@ -222,25 +222,6 @@
   .copy-toast{font-size:0.78rem;color:var(--sage);font-weight:700;margin-top:8px;display:none;}
   .brand-tag{font-size:0.78rem;color:var(--ink-soft);font-style:italic;margin-left:6px;}
   .qty-tag{font-weight:700;color:var(--brick);margin-right:6px;}
-  .tabs-nav{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
-  .tab-btn{font-weight:700;font-size:0.88rem;padding:9px 18px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink-soft);cursor:pointer;transition:all .15s ease;}
-  .tab-btn:hover{border-color:var(--brick);color:var(--brick-dark);}
-  .tab-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
-  .pantry-hint{color:var(--ink-soft);font-size:0.85rem;margin:0;max-width:560px;}
-  .pantry-card .rcard-body{padding-top:14px;}
-  .pantry-card .pantry-qty{font-size:1rem;color:var(--brick-dark);font-weight:800;}
-  .pantry-card .card-actions{position:absolute;top:8px;right:8px;opacity:1;}
-  .pantry-banner{border-radius:10px;padding:12px 16px;font-weight:700;font-size:0.9rem;margin:2px 0 16px;}
-  .pantry-banner-ok{background:rgba(107,122,94,0.16);color:#4b5741;border:1.5px solid var(--sage);}
-  .pantry-banner-missing{background:rgba(181,80,46,0.1);color:var(--brick-dark);border:1.5px solid var(--brick);}
-  .cook-btn{width:100%;background:var(--wine);color:#fff;border:none;border-radius:9px;padding:13px;font-weight:700;font-size:0.95rem;cursor:pointer;margin-bottom:20px;}
-  .cook-btn:hover{background:#5f2424;}
-  .pantry-badge-wrap{margin-top:3px;}
-  .pantry-badge{display:inline-block;font-size:0.71rem;font-weight:700;padding:2px 9px;border-radius:999px;line-height:1.6;}
-  .pantry-ok{background:rgba(107,122,94,0.18);color:#4b5741;}
-  .pantry-partial{background:rgba(181,80,46,0.14);color:var(--brick-dark);}
-  .pantry-missing{background:rgba(122,46,46,0.12);color:var(--wine);}
-  .pantry-unknown{background:var(--kraft);color:var(--ink-soft);}
   ul.check-list li{align-items:flex-start;}
   footer{text-align:center;margin-top:60px;font-family:'Kalam',cursive;color:var(--ink-soft);font-size:0.85rem;}
   @media (max-width:560px){
@@ -258,11 +239,6 @@
     <div class="count-pill" id="countPill">0 receitas</div>
   </header>
 
-  <div class="tabs-nav" id="tabsNav">
-    <button class="tab-btn active" data-tab="recipes">📖 Receitas</button>
-    <button class="tab-btn" data-tab="pantry">📦 Tenho em casa</button>
-  </div>
-
   <div id="recipesView">
     <div class="toolbar" id="toolbar">
       <div class="chips-wrap" id="chipsWrap"></div>
@@ -277,21 +253,6 @@
       <div class="em">🍪</div>
       <h2>Nenhuma receita por aqui ainda</h2>
       <p>Clique em "+ Nova receita" para começar sua coleção.</p>
-    </div>
-  </div>
-
-  <div id="pantryView" style="display:none;">
-    <div class="toolbar">
-      <p class="pantry-hint">Cadastre o que você já tem em casa e a quantidade aproximada. Ao abrir uma receita, o site mostra o que você já tem, o que falta comprar, e desconta do seu estoque quando você confirmar que fez a receita.</p>
-      <div class="btn-group">
-        <button class="add-btn" id="openPantryAdd">+ Novo item</button>
-      </div>
-    </div>
-    <div class="grid" id="pantryGrid"></div>
-    <div class="empty-state" id="pantryEmpty" style="display:none;">
-      <div class="em">📦</div>
-      <h2>Sua despensa está vazia</h2>
-      <p>Clique em "+ Novo item" para cadastrar o que você tem em casa.</p>
     </div>
   </div>
 
@@ -347,22 +308,7 @@
 
 <div class="overlay" id="shopOverlay"><div class="detail" id="shopContent"></div></div>
 
-<div class="overlay" id="pantryFormOverlay">
-  <div class="detail form-grid" id="pantryFormContent" style="max-width:420px;">
-    <button class="close-btn" id="closePantryForm">✕</button>
-    <h2 id="pantryFormHeading" style="margin:0 0 18px;">Novo item</h2>
-    <label>Ingrediente</label>
-    <input type="text" id="pfName" placeholder="Ex: Farinha de trigo">
-    <label>Quantidade que você tem</label>
-    <div style="display:flex; gap:10px;">
-      <input type="text" inputmode="decimal" id="pfQty" placeholder="Ex: 500" style="flex:1;">
-      <select id="pfUnit" style="flex:1;"></select>
-    </div>
-    <div class="hint" style="margin-top:6px;opacity:.75;">Se você já tem esse ingrediente cadastrado, salvar de novo com o mesmo nome atualiza a quantidade (não duplica).</div>
-    <div class="err" id="pantryFormErr">Preencha o nome e a quantidade.</div>
-    <button class="save-btn" id="savePantryItem">Salvar</button>
-  </div>
-</div>
+
 
 <script>
 /* ====== CONFIGURAÇÃO DO JSONBIN.IO ======
@@ -484,215 +430,41 @@ function renderStepText(text, ingredients, mult, asHtml){
   });
 }
 
-/* ====== "Tenho em casa" (despensa) ======
-   Guardado no localStorage do navegador (é um controle simples, pessoal,
-   não precisa de sincronização entre dispositivos como as receitas). */
-const PANTRY_KEY = 'minha_despensa_v1';
-let pantry = [];
-let editingPantryId = null;
-
-function loadPantry(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(PANTRY_KEY) || '[]');
-    pantry = Array.isArray(raw) ? raw : [];
-  }catch(e){ pantry = []; }
-}
-function savePantry(){
-  try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); } // cópia local (cache)
-  catch(e){ console.error('Não foi possível salvar a despensa:', e); }
-  if(typeof persistPantry==='function') persistPantry(); // grava também no JSONBin (bin próprio da despensa)
-}
-function pantryFind(name){
-  const key=(name||'').trim().toLowerCase();
-  if(!key) return null;
-  return pantry.find(p=>(p.name||'').trim().toLowerCase()===key) || null;
-}
-/* Unidades "compatíveis" para converter automaticamente (peso e volume).
-   As demais (unidade, lata, pacote, colher...) só comparam quando forem exatamente a mesma unidade. */
-const UNIT_BASE = { g:{type:'peso',factor:1}, kg:{type:'peso',factor:1000}, ml:{type:'volume',factor:1}, L:{type:'volume',factor:1000} };
-function unitBase(u){ return UNIT_BASE[u] || {type:u, factor:1}; }
-
-/* Compara o que a receita precisa (já multiplicado) com o que há na despensa. */
-function matchIngredientToPantry(ing, mult){
-  mult = mult || 1;
-  const needed = parseQty(ing.qty) * mult;
-  const item = pantryFind(ing.name);
-  if(!item) return {status:'none', needed, unit:ing.unit};
-  const a=unitBase(ing.unit), b=unitBase(item.unit);
-  const haveQty = parseQty(item.qty);
-  if(a.type !== b.type) return {status:'unknown', needed, unit:ing.unit, have:haveQty, pantryUnit:item.unit};
-  const neededBase = needed*a.factor;
-  const haveBase = haveQty*b.factor;
-  if(haveBase <= 0.0001) return {status:'none', needed, unit:ing.unit, have:haveQty, pantryUnit:item.unit};
-  if(haveBase + 0.0001 >= neededBase) return {status:'full', needed, unit:ing.unit, have:haveQty, pantryUnit:item.unit};
-  const missing = (neededBase-haveBase)/a.factor;
-  return {status:'partial', needed, unit:ing.unit, have:haveQty, pantryUnit:item.unit, missing};
-}
-function pantryStatusBadge(m){
-  if(m.status==='full') return `<span class="pantry-badge pantry-ok">✓ você tem</span>`;
-  if(m.status==='partial') return `<span class="pantry-badge pantry-partial">tem ${formatQty(m.have)} ${escapeHtml(unitLabel(m.pantryUnit,m.have))} · falta ${formatQty(m.missing)} ${escapeHtml(unitLabel(m.unit,m.missing))}</span>`;
-  if(m.status==='unknown') return `<span class="pantry-badge pantry-unknown">tem ${formatQty(m.have)} ${escapeHtml(unitLabel(m.pantryUnit,m.have))} (unidade diferente, confira à mão)</span>`;
-  return `<span class="pantry-badge pantry-missing">✗ falta comprar</span>`;
-}
-function pantrySummary(r, mult){
-  const results = r.ingredients.map(ing=>({ing, m:matchIngredientToPantry(ing, mult)}));
-  const allFull = results.length>0 && results.every(x=>x.m.status==='full');
-  const missingCount = results.filter(x=>x.m.status==='none' || x.m.status==='partial').length;
-  return {results, allFull, missingCount};
-}
-
-function renderPantry(){
-  const grid=document.getElementById('pantryGrid'), empty=document.getElementById('pantryEmpty');
-  if(!grid) return;
-  grid.innerHTML='';
-  if(pantry.length===0){ empty.style.display='block'; return; }
-  empty.style.display='none';
-  const sorted=[...pantry].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-  sorted.forEach(item=>{
-    const card=document.createElement('div');
-    card.className='rcard pantry-card'; card.style.setProperty('--rot','0deg');
-    card.innerHTML=`
-      <div class="card-actions">
-        <button class="icon-btn pantry-edit" title="Editar">✎</button>
-        <button class="icon-btn pantry-del" title="Excluir">✕</button>
-      </div>
-      <div class="rcard-body">
-        <h3>${escapeHtml(item.name)}</h3>
-        <div class="pantry-qty">${formatQty(item.qty)} ${escapeHtml(unitLabel(item.unit,item.qty))}</div>
-      </div>`;
-    card.querySelector('.pantry-edit').addEventListener('click',()=>openPantryForm(item));
-    card.querySelector('.pantry-del').addEventListener('click',()=>{
-      if(confirm(`Remover "${item.name}" da sua despensa?`)){
-        pantry = pantry.filter(p=>p.id!==item.id);
-        savePantry(); renderPantry();
-      }
-    });
-    grid.appendChild(card);
-  });
-}
-function openPantryForm(item){
-  editingPantryId = item ? item.id : null;
-  document.getElementById('pantryFormHeading').textContent = item ? 'Editar item' : 'Novo item';
-  document.getElementById('pfName').value = item ? item.name : '';
-  document.getElementById('pfQty').value = item ? String(item.qty) : '';
-  const unitSel = document.getElementById('pfUnit');
-  unitSel.innerHTML = UNITS.map(u=>`<option value="${u.value}" ${item && item.unit===u.value?'selected':''}>${u.singular}</option>`).join('');
-  if(!item) unitSel.value='g';
-  document.getElementById('pantryFormErr').style.display='none';
-  document.getElementById('pantryFormOverlay').classList.add('show');
-}
-function closePantryForm(){ document.getElementById('pantryFormOverlay').classList.remove('show'); editingPantryId=null; }
-
-/* O bin de RECEITAS é sempre uma lista simples (array) de receitas — formato original.
-   A despensa fica em OUTRO bin, para nunca misturar formatos nem apagar receitas. */
+/* Receitas: sempre lidas e gravadas no banco (JSONBin). Nada é guardado no aparelho. */
 let dbReady = false; // só permite gravar depois de ler os dados com sucesso
-const RECIPES_BACKUP_KEY = 'receitas_backup_max';
-function readRecipesBackup(){ try{ const b=JSON.parse(localStorage.getItem(RECIPES_BACKUP_KEY)||'[]'); return Array.isArray(b)?b:[]; }catch(e){ return []; } }
-function backupRecipes(list){ // cópia de segurança local: só é atualizada se não diminuir
-  try{ if(list.length >= readRecipesBackup().length) localStorage.setItem(RECIPES_BACKUP_KEY, JSON.stringify(list)); }catch(e){}
-}
-
 function recipesPayload(){ return recipes.length ? recipes : [{_empty:true}]; } // JSONBin rejeita bin em branco
 async function loadRecipes(){
   const grid=document.getElementById('grid');
   grid.innerHTML='<p style="color:var(--ink-soft);grid-column:1/-1;">Carregando receitas...</p>';
   try{
-    if(!JSONBIN_BIN_ID){
-      // Primeira vez rodando: cria o bin no JSONBin com uma receita de exemplo.
-      const seed = seedRecipe();
-      seed.order = 0;
-      const newId = await jsonbinCreateBin([seed]);
-      JSONBIN_BIN_ID = newId;
-      recipes = [seed];
-      alert('Bin criado no JSONBin! Copie este ID e cole na constante JSONBIN_BIN_ID no código, para usar sempre o mesmo:\n\n' + newId);
-      console.log('JSONBIN_BIN_ID:', newId);
-      dbReady = true;
+    const data = await jsonbinRead();
+    let needsWrite = false;
+    if(Array.isArray(data)){
+      recipes = data.filter(r=>r && !r._empty);
+    } else if(data && Array.isArray(data.recipes)){
+      recipes = data.recipes.filter(r=>r && !r._empty); // formato antigo: volta para lista simples
+      needsWrite = true;
     } else {
-      const data = await jsonbinRead();
-      let needsWrite = false;
-      if(Array.isArray(data)){
-        recipes = data.filter(r=>r && !r._empty);
-      } else if(data && Array.isArray(data.recipes)){
-        // Formato {recipes, pantry} (versão anterior): volta para lista simples
-        recipes = data.recipes.filter(r=>r && !r._empty);
-        if(Array.isArray(data.pantry) && data.pantry.length && pantry.length===0){
-          pantry = data.pantry;
-          try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }catch(e){}
-        }
-        needsWrite = true;
-      } else {
-        // Formato desconhecido: NUNCA sobrescrever. Mostra erro e não grava nada.
-        throw new Error('formato inesperado no bin — nada foi alterado');
-      }
-      // Proteção: se o banco tem bem menos receitas que a cópia deste aparelho, oferece restaurar
-      const backup = readRecipesBackup();
-      if(backup.length >= 3 && recipes.length <= 1 && recipes.length < backup.length){
-        if(confirm('O banco tem só '+recipes.length+' receita(s), mas este aparelho guarda uma cópia com '+backup.length+'.\n\nRestaurar a cópia?')){
-          recipes = backup; needsWrite = true;
-        }
-      }
-      if(recipes.some(r=>r.order==null)){
-        recipes.forEach((r,idx)=>{ if(r.order==null) r.order=idx; });
-        needsWrite = true;
-      }
-      dbReady = true;
-      if(needsWrite) await jsonbinWrite(recipesPayload());
+      // Formato desconhecido: NUNCA sobrescrever. Mostra erro e não grava nada.
+      throw new Error('formato inesperado no bin — nada foi alterado');
     }
-    backupRecipes(recipes);
+    if(recipes.some(r=>r.order==null)){
+      recipes.forEach((r,idx)=>{ if(r.order==null) r.order=idx; });
+      needsWrite = true;
+    }
+    dbReady = true;
+    if(needsWrite) await jsonbinWrite(recipesPayload());
   }catch(err){
-    grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao JSONBin. Confira JSONBIN_API_KEY / JSONBIN_BIN_ID no código. (${escapeHtml(err.message)})</p>`;
+    grid.innerHTML=`<p style="color:var(--brick-dark);grid-column:1/-1;">Não foi possível conectar ao banco. (${escapeHtml(err.message)})</p>`;
     console.error(err);
     return;
   }
   render();
-  syncPantryRemote();
 }
 async function persistRecipes(){
   if(!dbReady) return;
-  try{
-    await jsonbinWrite(recipesPayload());
-    try{ localStorage.setItem(RECIPES_BACKUP_KEY, JSON.stringify(recipes)); }catch(e){} // mudança feita por você: a cópia acompanha
-  }catch(err){
-    alert('Erro ao salvar no JSONBin: '+err.message); console.error(err);
-  }
-}
-
-/* ====== Despensa no JSONBin (bin separado) ======
-   Deixe vazio na 1ª vez: o app cria o bin e mostra o ID para você colar aqui. */
-let JSONBIN_PANTRY_BIN_ID = '';
-const PANTRY_BIN_LS = 'despensa_bin_id';
-let pantryReady = false;
-function pantryPayload(){ return pantry.length ? pantry : [{_empty:true}]; } // o JSONBin não aceita bin em branco
-async function syncPantryRemote(){
-  try{
-    if(!JSONBIN_PANTRY_BIN_ID){ try{ JSONBIN_PANTRY_BIN_ID = localStorage.getItem(PANTRY_BIN_LS) || ''; }catch(e){} }
-    if(!JSONBIN_PANTRY_BIN_ID){
-      const id = await jsonbinCreateBin(pantryPayload(), 'le-petit-chef-despensa');
-      JSONBIN_PANTRY_BIN_ID = id;
-      try{ localStorage.setItem(PANTRY_BIN_LS, id); }catch(e){}
-      pantryReady = true;
-      alert('Bin da despensa criado! Cole este ID na constante JSONBIN_PANTRY_BIN_ID no código para sincronizar em todos os aparelhos:\n\n'+id);
-      console.log('JSONBIN_PANTRY_BIN_ID:', id);
-      return;
-    }
-    const data = await jsonbinRead(JSONBIN_PANTRY_BIN_ID);
-    if(Array.isArray(data)){
-      const remote = data.filter(p=>p && p.name);
-      if(remote.length===0 && pantry.length){
-        await jsonbinWrite(pantryPayload(), JSONBIN_PANTRY_BIN_ID); // sobe o que só existe neste aparelho
-      } else {
-        pantry = remote;
-        try{ localStorage.setItem(PANTRY_KEY, JSON.stringify(pantry)); }catch(e){}
-      }
-      pantryReady = true;
-      renderPantry();
-    }
-  }catch(err){ console.error('Despensa: não sincronizou', err); }
-}
-async function persistPantry(){
-  if(!pantryReady || !JSONBIN_PANTRY_BIN_ID) return;
-  try{ await jsonbinWrite(pantryPayload(), JSONBIN_PANTRY_BIN_ID); }
-  catch(err){ alert('Erro ao salvar a despensa no JSONBin: '+err.message); console.error(err); }
+  try{ await jsonbinWrite(recipesPayload()); }
+  catch(err){ alert('Erro ao salvar no banco: '+err.message); console.error(err); }
 }
 async function saveRecipeToDb(r){
   // O array `recipes` já foi atualizado em memória antes desta chamada;
@@ -766,18 +538,7 @@ function renderToolbarChips(){
   wrap.innerHTML = cats.map(c=>`<button class="chip${c===activeFilter?' active':''}" data-cat="${escapeHtml(c)}">${CATEGORY_ICONS[c]||'📌'} ${escapeHtml(c)}</button>`).join('');
 }
 
-function syncPantryFromRecipes(){
-  let changed=false;
-  recipes.forEach(r=>(r.ingredients||[]).forEach(ing=>{
-    const n=(ing.name||'').trim();
-    if(!n || n==='(sem ingredientes)' || pantryFind(n)) return;
-    pantry.push({id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name:n, qty:0, unit:ing.unit||'g'});
-    changed=true;
-  }));
-  if(changed){ savePantry(); if(typeof renderPantry==='function') renderPantry(); }
-}
 function render(){
-  syncPantryFromRecipes();
   renderToolbarChips();
   const grid=document.getElementById('grid'), empty=document.getElementById('emptyState');
   const filtered = activeFilter ? recipes.filter(r=>r.category===activeFilter) : recipes;
@@ -921,7 +682,7 @@ function openDetail(r){
     </div>
     <button type="button" class="section-label section-toggle" id="stepsToggle">Modo de preparo <span class="toggle-arrow" id="stepsArrow">▸</span></button>
     <div class="collapsible" id="stepsBody"><div id="stepsContainer"></div></div>
-    <div id="pantrySection" style="margin-top:22px;"></div>`;
+    `;
   let mult=1;
   function renderAll(){
     const yieldEl=c.querySelector('#yieldDisplay');
@@ -937,23 +698,10 @@ function openDetail(r){
         yieldEl.style.display='none';
       }
     }
-    const pantrySectionEl = c.querySelector('#pantrySection');
-    if(pantrySectionEl){
-      const summary = pantrySummary(r, mult);
-      const bannerClass = summary.allFull ? 'pantry-banner-ok' : 'pantry-banner-missing';
-      const bannerText = summary.allFull
-        ? '🎉 Você tem tudo em casa para fazer essa receita!'
-        : `🛒 Falta${summary.missingCount>1?'m':''} ${summary.missingCount} ingrediente${summary.missingCount>1?'s':''} para fazer essa receita.`;
-      pantrySectionEl.innerHTML = `
-        <div class="pantry-banner ${bannerClass}">${bannerText}</div>
-        <button type="button" class="cook-btn" id="cookRecipeBtn">✅ Vou fazer essa receita</button>`;
-      pantrySectionEl.querySelector('#cookRecipeBtn').addEventListener('click', cookRecipe);
-    }
     const ingList=c.querySelector('#ingList'); ingList.innerHTML='';
     r.ingredients.forEach((ing,idx)=>{
       const li=document.createElement('li');
-      const m = matchIngredientToPantry(ing, mult);
-      li.innerHTML=`<input type="checkbox" id="ing${idx}"><div style="flex:1;min-width:0;"><label for="ing${idx}">${escapeHtml(formatIngredientText(ing,mult))}</label><div class="pantry-badge-wrap">${pantryStatusBadge(m)}</div></div>`;
+      li.innerHTML=`<input type="checkbox" id="ing${idx}"><div style="flex:1;min-width:0;"><label for="ing${idx}">${escapeHtml(formatIngredientText(ing,mult))}</label></div>`;
       li.querySelector('input').addEventListener('change',e=>li.classList.toggle('checked',e.target.checked));
       ingList.appendChild(li);
     });
@@ -1005,24 +753,6 @@ function openDetail(r){
       });
       currentOl.appendChild(li);
     });
-  }
-  function cookRecipe(){
-    const msg = `Confirma que vai fazer "${r.title}"?\n\nOs ingredientes que você tem cadastrados em "Tenho em casa" serão descontados do seu estoque.`;
-    if(!confirm(msg)) return;
-    r.ingredients.forEach(ing=>{
-      const item = pantryFind(ing.name);
-      if(!item) return; // ingrediente não cadastrado na despensa: nada a descontar
-      const a=unitBase(ing.unit), b=unitBase(item.unit);
-      if(a.type!==b.type) return; // unidades não comparáveis automaticamente: não mexe no estoque
-      const neededBase = parseQty(ing.qty)*mult*a.factor;
-      const haveBase = parseQty(item.qty)*b.factor;
-      const remainingBase = Math.max(0, haveBase - neededBase);
-      item.qty = Math.round((remainingBase/b.factor)*100)/100;
-    });
-    savePantry();
-    renderAll();
-    renderPantry();
-    alert('Prontinho! Seu estoque em "Tenho em casa" foi atualizado. 🎉');
   }
   renderAll();
   c.querySelector('#ingToggle').addEventListener('click',()=>{
@@ -1396,15 +1126,6 @@ document.getElementById('saveRecipe').addEventListener('click',()=>{
     };
     recipes.unshift(savedRecipe);
   }
-  // Adiciona automaticamente os ingredientes da receita em "Tenho em casa" com quantidade 0
-  let pantryChanged=false;
-  cleanIng.forEach(ing=>{
-    if(!pantryFind(ing.name)){
-      pantry.push({id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name:ing.name, qty:0, unit:ing.unit||'g'});
-      pantryChanged=true;
-    }
-  });
-  if(pantryChanged){ savePantry(); renderPantry(); }
   render(); closeForm();
   if(savedRecipe) saveRecipeToDb(savedRecipe);
 });
@@ -1492,36 +1213,11 @@ function generateShopList(ids, multByRecipe){
     const totalQty = Object.entries(it.qtyByUnit)
       .map(([unit,q])=>`${formatQty(q)} ${unitLabel(unit,q)}`)
       .join(' + ');
-    // Desconta automaticamente o que já está em "Tenho em casa"
-    const p = pantryFind(it.name);
-    const missingParts=[];
-    const haveParts=[];
-    let unknown=false;
-    Object.entries(it.qtyByUnit).forEach(([unit,q])=>{
-      let missing=q;
-      if(p){
-        const haveQty=parseQty(p.qty);
-        const a=unitBase(unit), b=unitBase(p.unit);
-        if(a.type===b.type && haveQty>0){
-          const haveBase=haveQty*b.factor;
-          const used=Math.min(haveBase, q*a.factor);
-          missing=(q*a.factor-used)/a.factor;
-          haveParts.push(`${formatQty(used/b.factor)} ${unitLabel(p.unit, used/b.factor)}`);
-        } else if(a.type!==b.type && haveQty>0){
-          unknown=true;
-          haveParts.push(`${formatQty(haveQty)} ${unitLabel(p.unit, haveQty)}`);
-        }
-      }
-      if(missing>0.0001) missingParts.push(`${formatQty(missing)} ${unitLabel(unit,missing)}`);
-    });
     return {
       name:it.name,
       brand:Array.from(it.brands).join(' / '),
       totalQty,
-      missingQty:missingParts.join(' + '),
-      haveQty:haveParts.join(' + '),
-      unknown,
-      covered:missingParts.length===0 && !unknown
+      missingQty:totalQty
     };
   });
   items.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
@@ -1531,11 +1227,11 @@ function generateShopList(ids, multByRecipe){
     <button class="close-btn" id="closeShop2">✕</button>
     <span class="tab2" style="background:var(--sage);">Lista de compras</span>
     <button class="back-link" id="backToPick">← escolher outras receitas</button>
-    <h2>O que falta comprar</h2>
-    <p style="color:var(--ink-soft); font-size:0.85rem; margin-top:-8px;">O que você já tem em casa foi descontado automaticamente. Marque algo só se quiser tirar da lista.</p>
+    <h2>Lista de compras</h2>
+    <p style="color:var(--ink-soft); font-size:0.85rem; margin-top:-8px;">Marque algo só se quiser tirar da lista.</p>
     <ul class="check-list" id="shopItems"></ul>
     <div class="shop-actions">
-      <button class="btn-copy" id="copyMissing">Copiar itens faltantes</button>
+      <button class="btn-copy" id="copyMissing">Copiar lista</button>
       <button class="btn-wpp" id="wppMissing">Compartilhar no WhatsApp</button>
     </div>
     <div class="copy-toast" id="copyToast">Copiado! ✓</div>`;
@@ -1543,17 +1239,9 @@ function generateShopList(ids, multByRecipe){
   items.forEach((it,idx)=>{
     const li=document.createElement('li');
     const brandHtml = it.brand ? `<span class="brand-tag">— Marca: ${escapeHtml(it.brand)}</span>` : '';
-    let mainHtml, haveHtml='';
-    if(it.covered){
-      mainHtml=`<span class="qty-tag">✓ você já tem</span>`;
-      if(it.haveQty) haveHtml=`<span class="brand-tag">precisa de ${escapeHtml(it.totalQty)} · tem ${escapeHtml(it.haveQty)}</span>`;
-    } else {
-      mainHtml=`<span class="qty-tag">falta ${escapeHtml(it.missingQty)}</span>`;
-      if(it.haveQty) haveHtml=`<span class="brand-tag">você tem ${escapeHtml(it.haveQty)}${it.unknown?' (unidade diferente, confira à mão)':''} · total das receitas: ${escapeHtml(it.totalQty)}</span>`;
-    }
+    const mainHtml=`<span class="qty-tag">${escapeHtml(it.missingQty)}</span>`, haveHtml='';
     li.dataset.plain = (it.missingQty?`${it.missingQty} de `:'') + it.name + (it.brand?` — Marca: ${it.brand}`:'');
-    li.innerHTML=`<input type="checkbox" id="shop${idx}"${it.covered?' checked':''}><label for="shop${idx}">${mainHtml}${escapeHtml(it.name)}${brandHtml}${haveHtml}</label>`;
-    if(it.covered) li.classList.add('checked');
+    li.innerHTML=`<input type="checkbox" id="shop${idx}"><label for="shop${idx}">${mainHtml}${escapeHtml(it.name)}${brandHtml}${haveHtml}</label>`;
     li.querySelector('input').addEventListener('change',e=>li.classList.toggle('checked',e.target.checked));
     ul.appendChild(li);
   });
@@ -1583,44 +1271,6 @@ function generateShopList(ids, multByRecipe){
 }
 document.getElementById('openShop').addEventListener('click',openShopPicker);
 
-/* Abas: Receitas / Tenho em casa */
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    document.getElementById('recipesView').style.display = tab==='recipes' ? '' : 'none';
-    document.getElementById('pantryView').style.display = tab==='pantry' ? '' : 'none';
-    if(tab==='pantry') renderPantry();
-  });
-});
-
-/* Formulário da despensa */
-document.getElementById('openPantryAdd').addEventListener('click', ()=>openPantryForm(null));
-document.getElementById('closePantryForm').addEventListener('click', closePantryForm);
-document.getElementById('savePantryItem').addEventListener('click', ()=>{
-  const name = document.getElementById('pfName').value.trim();
-  const qtyRaw = document.getElementById('pfQty').value;
-  const qty = parseQty(qtyRaw);
-  const unit = document.getElementById('pfUnit').value;
-  if(!name || !qtyRaw.trim()){
-    document.getElementById('pantryFormErr').style.display='block';
-    return;
-  }
-  let existing = editingPantryId
-    ? pantry.find(p=>p.id===editingPantryId)
-    : pantry.find(p=>p.name.trim().toLowerCase()===name.toLowerCase());
-  if(existing){
-    existing.name = name; existing.qty = qty; existing.unit = unit;
-  } else {
-    pantry.push({id:'p_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name, qty, unit});
-  }
-  savePantry();
-  closePantryForm();
-  renderPantry();
-});
-
-loadPantry();
 (function(){
   let lockedY=0, locked=false;
   function update(){
