@@ -395,6 +395,12 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
   #detailContent .d-grid{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-content:start;}
   #detailContent .tabs-wrap{position:sticky;top:-1px;z-index:3;background:#fff;padding:10px 0;}
 }
+
+/* abas da receita no celular: faixa branca opaca com degradê embaixo, texto não aparece cortado */
+@media (max-width:760px){
+  #detailContent .tabs-wrap{z-index:5;padding:12px 0 10px;box-shadow:0 -14px 0 0 #fff;}
+  #detailContent .tabs-wrap::after{content:"";position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(#fff,rgba(255,255,255,0));pointer-events:none;}
+}
 </style></head>
 <body>
 
