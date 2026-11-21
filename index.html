@@ -366,6 +366,19 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
   #detailContent .tabs-wrap{position:static;flex:0 0 auto;padding:16px 0 14px;}
   #detailContent .d-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:24px;}
 }
+
+/* ===== FORMULÁRIO (criar/editar): tela fixa, só o conteúdo rola, sem balançar pro lado ===== */
+#formOverlay{overflow:hidden;padding:0;align-items:stretch;justify-content:center;}
+#formContent{min-width:0;width:100%;max-width:680px;height:100vh;height:100dvh;min-height:0;padding:0;display:flex;flex-direction:column;overflow:hidden;border-radius:0;animation:none;}
+#formContent .wiz-top,#formContent .wiz-dots,#formContent .wiz-nav{position:static;flex:0 0 auto;}
+#formContent .wiz-nav{margin-top:0;background:var(--grey);}
+.wiz-scroll{flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:16px;}
+.wiz-panel,.ing-row,.step-row,.substeps-editor,.ing-fields{min-width:0;max-width:100%;}
+.ing-picker{min-width:0;max-width:100%;}
+@media (min-width:761px){
+  #formOverlay{padding:20px 16px;}
+  #formContent{height:calc(100vh - 40px);height:calc(100dvh - 40px);border-radius:32px;}
+}
 </style></head>
 <body>
 
@@ -407,6 +420,7 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
     <div class="wiz-top"><button class="back-btn" id="closeForm" aria-label="Fechar">✕</button><h2 id="formHeading">Nova receita</h2></div>
     <div class="wiz-dots"><button type="button" class="wiz-dot on" data-step="1">1 · Básico</button><button type="button" class="wiz-dot" data-step="2">2 · Ingredientes</button><button type="button" class="wiz-dot" data-step="3">3 · Preparo</button></div>
 
+    <div class="wiz-scroll" id="wizScroll">
     <section class="wiz-panel on" data-step="1">
       <h3>Como se chama?</h3>
       <label for="fTitle" class="sr">Nome</label>
@@ -447,6 +461,8 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
       <button type="button" class="row-add row-add-section" id="addSectionRow">+ seção</button>
       <div class="hint" style="margin-top:14px;">Dica: toque num ingrediente ao escrever o passo para que a quantidade mude sozinha ao multiplicar a receita.</div>
     </section>
+
+    </div>
 
     <div class="wiz-nav">
       <button type="button" id="wizBack">Voltar</button>
@@ -1459,6 +1475,7 @@ function goStep(n){
   document.getElementById('saveRecipe').classList.toggle('show', n===3 || !!editingId);
   if(n===3) document.querySelectorAll('#stepRows textarea').forEach(autoGrowTextarea);
   document.getElementById('formOverlay').scrollTop=0;
+  const _ws=document.getElementById('wizScroll'); if(_ws) _ws.scrollTop=0;
 }
 document.querySelectorAll('.cat-tile').forEach(t=>t.addEventListener('click',()=>{ document.getElementById('fCat').value=t.dataset.cat; syncCat(); }));
 document.querySelectorAll('.wiz-dot').forEach(d=>d.addEventListener('click',()=>goStep(+d.dataset.step)));
