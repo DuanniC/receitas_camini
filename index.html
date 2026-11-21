@@ -379,6 +379,22 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
   #formOverlay{padding:20px 16px;}
   #formContent{height:calc(100vh - 40px);height:calc(100dvh - 40px);border-radius:32px;}
 }
+
+/* barra de botões do formulário: proporcional e numa linha só */
+#formContent .wiz-nav{gap:8px;padding-top:10px;align-items:stretch;}
+#formContent .wiz-nav button{min-height:50px;font-size:.98rem;padding:0 14px;white-space:nowrap;line-height:1.1;}
+#formContent .wiz-nav #wizBack{flex:0 0 auto;min-width:92px;}
+#formContent .wiz-nav #wizNext,#formContent .wiz-nav .save-btn{flex:1 1 0;min-width:0;width:auto;}
+#formContent .wiz-nav.has-save #wizNext{background:#fff;color:var(--rasp);box-shadow:none;}
+
+/* receita aberta no celular: cabeçalho fixo, só o conteúdo rola e as abas grudam no topo da rolagem */
+@media (max-width:760px){
+  #detailOverlay{overflow:hidden;padding:0;}
+  #detailContent{height:100vh;height:100dvh;min-height:0;padding:0;border-radius:0;display:flex;flex-direction:column;overflow:hidden;animation:none;}
+  #detailContent .d-top{position:static;flex:0 0 auto;}
+  #detailContent .d-grid{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;align-content:start;}
+  #detailContent .tabs-wrap{position:sticky;top:-1px;z-index:3;background:#fff;padding:10px 0;}
+}
 </style></head>
 <body>
 
@@ -467,7 +483,7 @@ input,select,textarea{font-size:max(16px,1rem) !important;}
     <div class="wiz-nav">
       <button type="button" id="wizBack">Voltar</button>
       <button type="button" id="wizNext">Continuar</button>
-      <button class="save-btn" id="saveRecipe">Salvar receita</button>
+      <button class="save-btn" id="saveRecipe">Salvar</button>
     </div>
   </div>
 </div>
@@ -1473,6 +1489,7 @@ function goStep(n){
   document.getElementById('wizBack').style.display = n===1 ? 'none' : '';
   document.getElementById('wizNext').style.display = n===3 ? 'none' : '';
   document.getElementById('saveRecipe').classList.toggle('show', n===3 || !!editingId);
+  document.querySelector('.wiz-nav').classList.toggle('has-save', n===3 || !!editingId);
   if(n===3) document.querySelectorAll('#stepRows textarea').forEach(autoGrowTextarea);
   document.getElementById('formOverlay').scrollTop=0;
   const _ws=document.getElementById('wizScroll'); if(_ws) _ws.scrollTop=0;
